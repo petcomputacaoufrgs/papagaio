@@ -15,7 +15,7 @@ We'll use Natural Language Processing (NLP) methods, observing the music as it w
 On the first step, we'll use text generation techniques, using Recurrent Neural Networks (RNNs) and Long-Short Term Memories (LSTMs). With the effectiveness of the training, even if it's reasonable, we'll perform the same implementation using specific models such as Transformers.
 
 ## Dataset
-The dataset is a composition of several songs in MIDI format. The .mid files are split by artist and we have, in total, about XXXX files.
+The dataset is a composition of several songs in MIDI format. The .mid files are split by artist and we have, in total, XXXX files.
 
 The dataset can be found on Kaggle [here](https://www.kaggle.com/edufantini/songs-in-midi) and in the [official website](https://colinraffel.com/projects/lmd/). We used the **Clean MIDI subset**.
 
