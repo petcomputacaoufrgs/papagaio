@@ -6,6 +6,7 @@ import music21
 import glob
 from tqdm import tqdm
 
+
 # open and read file
 def open_midi(midi_path, no_drums):
     mf = music21.midi.MidiFile()
