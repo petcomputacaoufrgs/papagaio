@@ -22,8 +22,9 @@ The dataset can be found on Kaggle [here](https://www.kaggle.com/edufantini/song
 ## Data preprocessing
 From an input file with songs in MIDI format, we preprocess the data in order to encode them using multi-hot encoding.
 
-![image](https://user-images.githubusercontent.com/49798588/120706718-cdf9ce00-c48f-11eb-8eb1-db7f31cf26af.png)
+Using this type of encoding, we use an essential factor of music: the time. In this way, the problem is different from a text generation problem due to the addition of one more dimension.
 
+![image](https://user-images.githubusercontent.com/49798588/120706718-cdf9ce00-c48f-11eb-8eb1-db7f31cf26af.png)
 
 For each bar, we separate them into 32 different frames, where each frame is an 88-position multi-hot vector, which each position represents the notes of a standard keyboard. The notes that are being played at the exact instant of the frame receive the value '1' in the respective position of the vector, whereas the notes that are turned off receive the value '0'.
 
