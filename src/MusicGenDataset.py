@@ -16,14 +16,14 @@ import torch
 #   * path: path to the dataset,
 #   * frames_per_bar: how many frames per bar
 #   the function encode_data will take
-def import_dataset(path, frames_per_bar):
+def import_dataset(root_dir, frames_per_bar):
     dataset = []
-
-    for filename in os.listdir(path):
-        if filename.endswith("mid"):
-            print(path + filename)
-            data = encode_data(path + filename, frames_per_bar)
-            dataset.append(data)
+    for artist in os.listdir(root_dir):
+        artists = root_dir + '/' + artist
+        for filename in os.listdir(artists):
+            if filename.endswith("mid"):
+                data = encode_data(root_dir + '/' + artist + '/' + filename, frames_per_bar)
+                dataset.append(data)
 
     return dataset
 
@@ -76,6 +76,22 @@ def create_dataset(dataset):
     return train_ds
 
 
+def create_vocab(dataset):
+    vocab = []
+    for song in dataset:
+        for part in song:
+            for bar in part:
+                vocab.append(bar)
+
+    vocab = np.array(vocab)
+    vocab = vocab.reshape(vocab.shape[0] * vocab.shape[1], vocab.shape[2])
+    vocab = np.unique(vocab, axis=0)
+
+    print(vocab)
+
+    return vocab
+
+
 # Create a torch DataLoader
 # Inputs:
 #   * train_ds: torch.Tensor dataset encoded as multi-hot
@@ -103,7 +119,7 @@ def load_dataloader(path):
 
 
 def test():
-    path = '../clean_midi/AC_DC/'
+    path = '../clean_midi'
     frames_per_bar = 32
     dataset = import_dataset(path, frames_per_bar)
     print(len(dataset))
@@ -125,5 +141,5 @@ def test_load():
 
 
 if __name__ == '__main__':
-    #test()
-    test_load()
+    test()
+    #test_load()
