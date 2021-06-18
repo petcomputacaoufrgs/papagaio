@@ -21,12 +21,16 @@ def import_dataset(root_dir, frames_per_bar):
     num_files_to_add = 0
     for artist in os.listdir(root_dir):
         artist_path = root_dir + '/' + artist
-        save_artist_path = '../saves/' + artist
+        if artist_path == "clean_midi/Lois_Lane":
+          break
+        print(artist_path)
+        save_artist_path = 'saves/' + artist
+        print(save_artist_path)
         os.mkdir(save_artist_path)
         if (not os.path.exists(save_artist_path + '/' + artist + '.pkl')) and \
                 (not os.path.exists(save_artist_path + '/' + artist + '.pt')):
             for filename in os.listdir(artist_path):
-                if filename.endswith("mid"):
+                if filename.endswith("mid")
                     num_files_to_add += 1
                     data = encode_data(root_dir + '/' + artist + '/' + filename, frames_per_bar)
                     dataset.append(data)
@@ -36,7 +40,9 @@ def import_dataset(root_dir, frames_per_bar):
             save_dataloader(train_dl, save_artist_path + '/' + artist)
             dataset = []
 
-        input('Continue? Y[ENTER] N[CTRL+C]')
+        #input('Continue? Y[ENTER] N[CTRL+C]')
+        clear = lambda: os.system('cls')
+        clear()
 
     return dataset
 
