@@ -2,13 +2,11 @@ import sys
 import numpy as np
 import pandas as pd
 from music21 import *
-import music21 as m21
 import glob
-from tqdm import tqdm
 import matplotlib.pyplot as plt
 from scipy import interpolate
 
-# path = '../data/Dreadlock_Holiday.4.mid'
+# path = '../data/Pacific_202.mid'
 N_FRAMES = 36
 N_NOTES = 88
 MIDI_OFFSET = 20
@@ -16,13 +14,13 @@ MIDI_OFFSET = 20
 
 def int2note(i):
     index = i + MIDI_OFFSET
-    n = m21.note.Note(midi=index)
+    n = note.Note(midi=index)
     return n
 
 
 # open and read file
 def open_midi(midi_path, no_drums):
-    mf = m21.midi.MidiFile()
+    mf = midi.MidiFile()
     mf.open(midi_path)
     mf.read()
     mf.close()
@@ -30,7 +28,7 @@ def open_midi(midi_path, no_drums):
         for i in range(len(mf.tracks)):
             mf.tracks[i].events = [ev for ev in mf.tracks[i].events if ev.channel != 10]
 
-    return m21.midi.translate.midiFileToStream(mf)
+    return midi.translate.midiFileToStream(mf)
 
 
 # get all notes from m21 obj
@@ -43,9 +41,9 @@ def extract_notes(midi):
             parent_element.append(nt)
         elif isinstance(nt, chord.Chord):
             for p in nt.pitches:
-                # print(p, m21.note.Note(pitch=p))
+                # print(p, note.Note(pitch=p))
                 # input()
-                parent_element.append(m21.note.Note(pitch=p))
+                parent_element.append(note.Note(pitch=p))
 
     # print(parent_element)
     # input()
@@ -68,6 +66,10 @@ def measure2frames(measure, n_frames, N_BEATS=4):
     frames = [[0 for i in range(N_NOTES)] for j in range(n_frames)]
 
     for nt in measure_notes:
+
+        if nt.pitch.midi > N_NOTES + MIDI_OFFSET:
+            break
+
         # try:
         # print(nt.offset)
         frame_s = int(nt.offset * frames_beat)
@@ -110,6 +112,9 @@ def encode_data(path, n_frames):
 
         print('Processing part {}/{}'.format(i + 1, n))
 
+        # for a in part:
+        #     print(a)
+
         n_beats = None
 
         try:
@@ -119,9 +124,7 @@ def encode_data(path, n_frames):
 
         part_frames = []
 
-        for it in tqdm(part.measures(1, len(part)),
-                       desc="Converting part {}".format(i + 1),
-                       ncols=80):
+        for it in part.measures(1, len(part)):
 
             if isinstance(it, instrument.Instrument):
                 print('Intrumento: ', it)
@@ -177,11 +180,11 @@ def decode_measure(measure, n_frames):
                 # 1 -> *0*
                 if bool(state) is False:
 
-                    note = int2note(note_index)
-                    note.offset = start_register[note_index] / n_frames
-                    note.duration.quarterLength = duration_register[note_index] / n_frames
+                    nt = int2note(note_index)
+                    nt.duration.quarterLength = duration_register[note_index] / n_frames
 
-                    output.append(note)
+                    note_offset = start_register[note_index] / n_frames
+                    output.insert(note_offset, nt)
 
                     # restarting the registers
                     duration_register[note_index] = 0
@@ -205,23 +208,30 @@ def decode_measure(measure, n_frames):
             # note is ON and measure ended
             elif bool(state_register[note_index]) and last_frame:
 
-                note = int2note(note_index)
-                note.offset = start_register[note_index] / n_frames
+                nt = int2note(note_index)
                 note.duration.quarterLength = duration_register[note_index] / n_frames
-                # print('Change caused by end frame #{}'.
-                #       format(f + 1),
-                #       ':\t {} | duration: {} | {} -> {}'.
-                #       format(note.nameWithOctave, note.duration,
-                #              bool(state_register[note_index]), bool(state)))
-                output.append(note)
+
+                note_offset = start_register[note_index] / n_frames
+                output.insert(note_offset, nt)
 
                 # print(note)
                 # input()
 
+    # output = output.flat.makeChords()
+
     # output.show('text')
-    # for n in output:
-    #     print("Note: %s%d | Start: %0.3f | End: %0.3f" %
-    #           (n.pitch.unicodeName, n.pitch.octave, n.offset, n.offset + n.duration.quarterLength))
+    for item in output:
+        if isinstance(item, chord.Chord):
+            print("Chord: %s | Start: %0.3f | End: %0.3f" %
+                  (item.pitchedCommonName, item.offset, item.offset + item.duration.quarterLength))
+
+        if isinstance(item, note.Note):
+            print("Note: %s%d | Start: %0.3f | End: %0.3f" %
+                  (item.pitch.unicodeName, item.pitch.octave, item.offset, item.offset + item.duration.quarterLength))
+
+        if isinstance(item, note.Rest):
+            print("Rest: | Start: %0.3f | End: %0.3f" %
+                  (item.offset, item.offset + item.duration.quarterLength))
     # input()
 
     return output
