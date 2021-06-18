@@ -30,7 +30,7 @@ def import_dataset(root_dir, frames_per_bar):
         if (not os.path.exists(save_artist_path + '/' + artist + '.pkl')) and \
                 (not os.path.exists(save_artist_path + '/' + artist + '.pt')):
             for filename in os.listdir(artist_path):
-                if filename.endswith("mid")
+                if filename.endswith("mid"):
                     num_files_to_add += 1
                     data = encode_data(root_dir + '/' + artist + '/' + filename, frames_per_bar)
                     dataset.append(data)
