@@ -1,4 +1,4 @@
-# Papagaio
+# <img src="https://user-images.githubusercontent.com/49798588/122488739-793c7400-cfb4-11eb-9a26-f67fe47b7fb9.png" alt="drawing" width="20"/> Papagaio 
 
 ## About
 
