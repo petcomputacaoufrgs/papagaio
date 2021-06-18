@@ -18,12 +18,25 @@ import torch
 #   the function encode_data will take
 def import_dataset(root_dir, frames_per_bar):
     dataset = []
+    num_files_to_add = 0
     for artist in os.listdir(root_dir):
-        artists = root_dir + '/' + artist
-        for filename in os.listdir(artists):
-            if filename.endswith("mid"):
-                data = encode_data(root_dir + '/' + artist + '/' + filename, frames_per_bar)
-                dataset.append(data)
+        artist_path = root_dir + '/' + artist
+        save_artist_path = '../saves/' + artist
+        os.mkdir(save_artist_path)
+        if (not os.path.exists(save_artist_path + '/' + artist + '.pkl')) and \
+                (not os.path.exists(save_artist_path + '/' + artist + '.pt')):
+            for filename in os.listdir(artist_path):
+                if filename.endswith("mid"):
+                    num_files_to_add += 1
+                    data = encode_data(root_dir + '/' + artist + '/' + filename, frames_per_bar)
+                    dataset.append(data)
+            train_ds = create_dataset(dataset)
+            train_dl = create_dataloader(train_ds)
+            save_dataset(train_ds, save_artist_path + '/' + artist)
+            save_dataloader(train_dl, save_artist_path + '/' + artist)
+            dataset = []
+
+        input('Continue? Y[ENTER] N[CTRL+C]')
 
     return dataset
 
@@ -102,12 +115,12 @@ def create_dataloader(train_ds, batch_size=1):
     return train_dl
 
 
-def save_dataset(ds, file_name):
-    torch.save(ds, '../saves/' + file_name + '.pt')
+def save_dataset(ds, path):
+    torch.save(ds, path + '.pt')
 
 
-def save_dataloader(dl, file_name):
-    torch.save(dl, '../saves/' + file_name + '.pkl')
+def save_dataloader(dl, path):
+    torch.save(dl, path + '.pkl')
 
 
 def load_dataset(path):
@@ -123,20 +136,20 @@ def test():
     frames_per_bar = 32
     dataset = import_dataset(path, frames_per_bar)
     print(len(dataset))
-    train_ds = create_dataset(dataset)
-    print(len(train_ds))
-    train_dl = create_dataloader(train_ds)
-    print(len(train_dl.dataset))
-    save_dataset(train_ds, 'acdc')
-    save_dataloader(train_dl, 'acdc')
+    #train_ds = create_dataset(dataset)
+    #print(len(train_ds))
+    #train_dl = create_dataloader(train_ds)
+    #print(len(train_dl.dataset))
+    #save_dataset(train_ds, 'acdc')
+    #save_dataloader(train_dl, 'acdc')
 
 
 def test_load():
     print('Loading ds ...')
-    train_ds = load_dataset('../saves/acdc.pt')
+    train_ds = load_dataset('../saves/train_ds')
     print(len(train_ds))
     print('Loading dl ...')
-    train_dl = load_dataloader('../saves/acdc.pkl')
+    train_dl = load_dataloader('../saves/train_dl')
     print(len(train_dl.dataset))
 
 

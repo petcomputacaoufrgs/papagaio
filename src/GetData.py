@@ -257,9 +257,9 @@ def decode_part(part, n_frames):
 
 
 # get encoded file parts with N_FRAMES frames per measure (bar)
-parts = encode_data(path, N_FRAMES)
+#parts = encode_data(path, N_FRAMES)
 
-for i, part in enumerate(parts):
+#for i, part in enumerate(parts):
     # print(part.shape)
-    print('Part #{}'.format(i + 1))
-    decode_part(part, N_FRAMES)
+    #print('Part #{}'.format(i + 1))
+    #decode_part(part, N_FRAMES)
