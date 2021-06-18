@@ -12,7 +12,9 @@ import torch
 
 
 # Import the whole dataset
-#   * Inputs: path to the dataset, how many frames per bar
+# Inputs:
+#   * path: path to the dataset,
+#   * frames_per_bar: how many frames per bar
 #   the function encode_data will take
 def import_dataset(path, frames_per_bar):
     dataset = []
@@ -26,7 +28,12 @@ def import_dataset(path, frames_per_bar):
     return dataset
 
 
-def preprocess_bar(encoded_seq, n_in=32, n_out=32):
+# Preprocess a bar with 'n_in' frames encoded as multi-hot
+# encoding and splits it in X, y, whose shape is (n_in-1, 88)
+# Inputs:
+#   * encoded_seq: multi-hot tensor with 'n_in' frames
+#   * n_in: number of frames in the bar
+def preprocess_bar(encoded_seq, n_in=32):
     # create lag copies of the sequence
     df = pd.DataFrame(encoded_seq)
     df = pd.concat([df.shift(n_in - i - 1) for i in range(n_in)], axis=1)
@@ -44,6 +51,9 @@ def preprocess_bar(encoded_seq, n_in=32, n_out=32):
     return X, y
 
 
+# Create a torch.Tensor dataset
+# Inputs:
+#   * dataset: dataset with .mid files
 def create_dataset(dataset):
     X = []
     y = []
@@ -66,6 +76,10 @@ def create_dataset(dataset):
     return train_ds
 
 
+# Create a torch DataLoader
+# Inputs:
+#   * train_ds: torch.Tensor dataset encoded as multi-hot
+#   * batch_size
 def create_dataloader(train_ds, batch_size=1):
     train_dl = DataLoader(train_ds, batch_size=batch_size, shuffle=False)
 
@@ -88,7 +102,7 @@ def load_dataloader(path):
     return torch.load(path)
 
 
-if __name__ == '__main__':
+def test():
     path = '../clean_midi/AC_DC/'
     frames_per_bar = 32
     dataset = import_dataset(path, frames_per_bar)
@@ -99,3 +113,17 @@ if __name__ == '__main__':
     print(len(train_dl.dataset))
     save_dataset(train_ds, 'acdc')
     save_dataloader(train_dl, 'acdc')
+
+
+def test_load():
+    print('Loading ds ...')
+    train_ds = load_dataset('../saves/acdc.pt')
+    print(len(train_ds))
+    print('Loading dl ...')
+    train_dl = load_dataloader('../saves/acdc.pkl')
+    print(len(train_dl.dataset))
+
+
+if __name__ == '__main__':
+    #test()
+    test_load()
