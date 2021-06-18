@@ -1,4 +1,4 @@
-# Music Generator with LSTM
+# Papagaio
 
 ## About
 
