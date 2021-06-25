@@ -1,6 +1,6 @@
 import logging
 import os
-import numpy as np
+import time
 import pandas as pd
 from music21 import *
 from pathlib import Path
@@ -13,12 +13,14 @@ def key_index2note(i, midi_offset):
     return n
 
 
+# return tuple (key, transposed_stream)
 def transposeStreamToC(stream, forceEval=False):
     # trying to capture a M21 Key object in the stream
     stream_key = stream.getElementsByClass(key.Key)
     if len(stream_key) != 0:
         stream_key = stream_key[0]
-    else: stream_key = None
+    else:
+        stream_key = None
 
     # if we failed to get a M21 Key and 'forceEval' is set to True
     # we will try to use M21 key analyzer.
@@ -85,8 +87,8 @@ def measure_data(measure):
 
 # extract frames from measure
 #
-#  M21 Measure -> Multi Hot Encoding
-def measure2framestack(measure, frames_per_beat, n_frames, n_notes, midi_offset, print_and_hold=False, save_at=None):
+#  M21 Measure -> Multi Hot Encodinghttps://tenor.com/view/taffarel-futebol-no-score-gif-12585286
+def measure2stackframe(measure, frames_per_beat, n_frames, n_notes, midi_offset, print_and_hold=False):
     data = measure_data(measure)
 
     keyboard_range = n_notes + midi_offset
@@ -138,14 +140,14 @@ def measure2framestack(measure, frames_per_beat, n_frames, n_notes, midi_offset,
     # create Pandas dataframe
     note_names = [key_index2note(i, midi_offset).nameWithOctave for i in range(0, n_notes)]
     frame_count = [i for i in range(1, n_frames + 1)]
-    framestack = pd.DataFrame(frames, index=frame_count, columns=note_names)
+    stackframe = pd.DataFrame(frames, index=frame_count, columns=note_names)
 
     # print the full frame stack
     if print_and_hold:
-        print(framestack)
+        print(stackframe)
         input()
 
-    return framestack
+    return stackframe
 
 
 # encode a single measure
@@ -154,9 +156,10 @@ def measure2framestack(measure, frames_per_beat, n_frames, n_notes, midi_offset,
 def encode_measure(measure, n_frames, n_notes, midi_offset, p_ks, p_bpm, p_ts, save_at=None):
     number = measure.measureNumber
     if save_at is not None:
-        path = save_at + '/Measure_' + str(number)
+        save_measure_at = save_at + '/Measure_' + str(number)
+        save_stackframe_at = save_at + '/stackframe_' + str(number)
 
-    print('Encoding measure #{}'.format(number))
+    # print('Encoding measure #{}'.format(number))
 
     # check for key changes
     m_ks, measure = transposeStreamToC(measure, forceEval=False)
@@ -176,9 +179,9 @@ def encode_measure(measure, n_frames, n_notes, midi_offset, p_ks, p_bpm, p_ts, s
         m_ts = m_ts[0]
         if m_ts != p_ts:
             # ts changed
-            if m_ts != '4/4':
+            if m_ts.ratioString != '4/4':
                 logging.warning('Found measure not in 4/4, skipping.')
-                # return None
+                return None
     else:
         m_ts = p_ts
 
@@ -189,21 +192,27 @@ def encode_measure(measure, n_frames, n_notes, midi_offset, p_ks, p_bpm, p_ts, s
     header = [m_ks,
               m_bpm,
               '{}/{}'.format(m_ts.numerator, m_ts.denominator)]
+    header = pd.DataFrame(header, index=['keySignature', 'BPM', 'timeSignature'])
 
-    # pandas framestack
-    framestack = measure2framestack(measure, frames_per_beat, n_frames, n_notes, midi_offset, print_and_hold=False)
+    # pandas stackframe
+    stackframe = measure2stackframe(measure,
+                                    frames_per_beat,
+                                    n_frames,
+                                    n_notes,
+                                    midi_offset,
+                                    print_and_hold=False)
 
     encoded_measure = pd.Series(
         {
             'header': header,
-            'framestack': framestack
+            'stackframe': stackframe
         }
 
     )
 
     if save_at is not None:
-        framestack.to_csv(path)
-        # encoded_measure.to_csv(path)
+        encoded_measure.to_csv(save_measure_at + '.csv')
+        stackframe.to_csv(save_stackframe_at + '.csv')
 
     return encoded_measure
 
@@ -230,7 +239,7 @@ def encode_part(part, n_frames, n_notes, midi_offset, save_part_at=None):
 
     # filter parts that are not in 4/4
     ts = part.getTimeSignatures()[0]
-    if ts.numerator != 4 or ts.denominator != 4:
+    if ts.ratioString != '4/4':
         logging.error('Part not in 4/4, breaking.')
         exit(1)
 
@@ -242,16 +251,17 @@ def encode_part(part, n_frames, n_notes, midi_offset, save_part_at=None):
               ks,
               bpm,
               '{}/{}'.format(ts.numerator, ts.denominator)]
+    header = pd.DataFrame(header, index=['instrument', 'keySignature', 'BPM', 'timeSignature'])
 
-    measures = [encode_measure(i,
-                               n_frames,
-                               n_notes,
-                               midi_offset,
-                               ks,
-                               bpm,
-                               '{}/{}'.format(ts.numerator, ts.denominator),
-                               save_at=save_measures_at
-                               ) for i in part.measures(1, len(part))]
+    measures = pd.DataFrame([encode_measure(i,
+                                            n_frames,
+                                            n_notes,
+                                            midi_offset,
+                                            ks,
+                                            bpm,
+                                            '{}/{}'.format(ts.numerator, ts.denominator),
+                                            save_at=save_measures_at
+                                            ) for i in part.measures(1, len(part))])
 
     # flat the stream
     # part = part.voicesToParts()
@@ -277,18 +287,19 @@ def encode_part(part, n_frames, n_notes, midi_offset, save_part_at=None):
 # encode the file data from a .mid file
 #
 # MIDI -> Multi Hot Encoding (Pandas DataFrame)
-def encode_file(path, n_frames, n_notes, midi_offset, save_encoded_at=None):
+def encode_data(path, n_frames, n_notes, midi_offset, save_encoded_at=None):
     filename = Path(path).stem.replace(' ', '_').replace('/', '')
-    print(filename)
 
     if save_encoded_at is not None:
         if not os.path.isdir(save_encoded_at):
             os.mkdir(save_encoded_at)
-        save_parts_at = save_encoded_at + filename
+        save_parts_at = save_encoded_at + filename + '/'
         if not os.path.isdir(save_parts_at):
             os.mkdir(save_parts_at)
 
     print('Encoding file {}'.format(filename))
+    timer = time.time()
+
     score = open_file(path)
     meta = score.metadata
 
@@ -296,36 +307,48 @@ def encode_file(path, n_frames, n_notes, midi_offset, save_encoded_at=None):
     # input()
 
     # polyphonic -> monophonic
-    # score = score.explode()
-    # score = score.voicesToParts()
-    score = score.semiFlat
+    score.explode()
+    score.voicesToParts()
+    score.semiFlat
 
     if save_encoded_at is not None:
 
-        data = []
-        for part in score.parts:
-            data.append(encode_part(part,
-                                    n_frames,
-                                    n_notes,
-                                    midi_offset,
-                                    save_part_at=save_parts_at
-                                    ))
+        parts = [
+            pd.DataFrame(
+                encode_part(part,
+                            n_frames,
+                            n_notes,
+                            midi_offset,
+                            save_part_at=save_parts_at
+                            )
+            ) for part in score.parts]
 
         encoded_data = pd.Series(
             {
                 'metadata': meta,
-                'data': data
+                'data': parts
             }
         )
 
-        # encoded_data.to_csv(save_encoded_at + filename + '.csv')
+        encoded_data.to_csv(save_encoded_at + filename + '.csv')
+
+        print('Took {}'.format(time.time() - timer))
         return encoded_data
     else:
-        data = [encode_part(part, n_frames, n_notes, midi_offset, save_as=None) for part in score.parts]
-        encoded_data = pd.DataFrame(
+        parts = [
+            pd.DataFrame(
+                encode_part(part,
+                            n_frames,
+                            n_notes,
+                            midi_offset
+                            )
+            ) for part in score.parts]
+
+        encoded_data = pd.Series(
             {
                 'metadata': meta,
-                'data': data
+                'data': parts
             }
         )
+        print('Took %f.3 seconds.' % (time.time() - timer))
         return encoded_data

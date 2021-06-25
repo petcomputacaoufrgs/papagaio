@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 from tqdm import tqdm
 import pandas as pd
@@ -11,8 +13,28 @@ def key_index2note(i, midi_offset):
     return n
 
 
+def get_transpose_interval(ks):
+
+    if ks is None:
+        return None
+
+    if ks != 'C' and ks != 'a':
+        if ks.mode == 'major':
+            return interval.Interval(pitch.Pitch('C'), ks.tonic)
+        elif ks.mode == 'minor':
+            return interval.Interval(pitch.Pitch('a'), ks.tonic)
+
+
+# MultiHotEncoding -> M21 Notes
+def decode_stackframe(stackframe):
+    notes = []
+
+
 # decode a N_NOTESxN_FRAMES array and turn it into a m21 Measure
-def decode_measure(measure, n_frames, ts):
+def decode_stackframe(stackframe, n_frames, ts):
+
+
+
     last_frame = False
 
     # the stream that will receive the notes
@@ -20,9 +42,9 @@ def decode_measure(measure, n_frames, ts):
 
     # vectors that will hold the current notes states and durations
     # they are initialized with the values of the first frame
-    state_register = measure[:][0].copy().to_numpy()
-    start_register = measure[:][0].copy().to_numpy() - 1
-    duration_register = measure[:][0].copy().to_numpy()
+    state_register = stackframe[:][0].copy().to_numpy()
+    start_register = stackframe[:][0].copy().to_numpy() - 1
+    duration_register = stackframe[:][0].copy().to_numpy()
 
     # iterate over frames
     for f in range(n_frames):
@@ -35,7 +57,7 @@ def decode_measure(measure, n_frames, ts):
 
         frames_per_beat = n_frames / ts.numerator
 
-        frame = measure[f]
+        frame = stackframe[f]
 
         if f == n_frames - 1:
             last_frame = True
@@ -109,36 +131,67 @@ def decode_measure(measure, n_frames, ts):
     return output
 
 
-# decode a PARTxN_NOTESxN_FRAMES array
-def decode_part(part, n_frames):
-    decoded = stream.Stream()
+def decode_measure(measure, save_at=None):
+    decoded = stream.Measure()
 
-    # part settings
-    try:
-        decoded.append(instrument.fromString(part[0]))
-    except:
-        pass
+    # get measure header and stackframe
+    header = measure['header']
+    stackframe = measure['stackframe']
 
-    ks = key.Key(part[1])
-    transpose_int = 0
+    # get header data
+    part_ks = header['keySignature']
+    part_bpm = header['BPM']
+    part_ts = header['timeSignature']
+
+    # set key and record the tranposition int
+    ks = key.Key(part_ks)
+    transpose_int = get_transpose_interval(ks)
     decoded.append(ks)
-    if ks != 'C' and ks != 'a':
-        if ks.mode == 'major':
-            transpose_int = interval. \
-                Interval(pitch.Pitch('C'), ks.tonic)
 
-        elif ks.mode == 'minor':
-            transpose_int = interval. \
-                Interval(pitch.Pitch('a'), ks.tonic)
+    # set bpm
+    decoded.append(tempo.MetronomeMark(number=part_bpm,
+                                       referent='quarter'))
 
-    decoded.append(tempo.MetronomeMark(number=part[2], referent='quarter'))
-    ts = meter.TimeSignature(part[3])
-    decoded.append(ts)
+    # set ts
+    decoded.append(meter.TimeSignature(part_ts))
 
-    part_measures = part[4:][0]
+    # decode and append stackframe
+    decoded.append(decode_stackframe(stackframe))
+
+
+# decode a PARTxN_NOTESxN_FRAMES array
+def decode_part(part, save_at=None):
+    decoded = stream.Part()
+
+    # get part header and measures
+    header = part['header']
+    measures = part['measures']
+
+    # get header data
+    part_inst = header['instrument']
+    part_ks = header['keySignature']
+    part_bpm = header['BPM']
+    part_ts = header['timeSignature']
+
+    # set instrument
+    decoded.append(instrument.fromString(part_inst))
+
+    # set key and record the tranposition int
+    ks = key.Key(part_ks)
+    transpose_int = get_transpose_interval(ks)
+    decoded.append(ks)
+
+    # set bpm
+    decoded.append(tempo.MetronomeMark(number=part_bpm,
+                                       referent='quarter'))
+
+    # set ts
+    decoded.append(meter.TimeSignature(part_ts))
+
+    # decode measures
 
     # iterate over measures (bars)
-    for i, m in enumerate(part_measures):
+    for i, m in enumerate(measures):
         # measure settings
         decoded.append(key.Key(m[0]))
         decoded.append(tempo.MetronomeMark(number=m[1], referent='quarter'))
@@ -150,33 +203,45 @@ def decode_part(part, n_frames):
         measure = measure.T
         print("Measure {}\n".format(i+1), measure)
         # input()
-        decoded.append(decode_measure(measure, n_frames, meter.TimeSignature('4/4')))
+        decoded.append(decode_measure(measure, meter.TimeSignature('4/4')))
 
     decoded.transpose(transpose_int, inPlace=True)
     decoded.makeNotation(inPlace=True)
-    decoded.write('midi', fp='decoded.mid')
-    print('Saved')
-    # input()
+
+    if save_at is not None:
+        decoded.write('midi', fp=save_at)
 
     return decoded
 
 
 # decode a list of streams
-def decode_data(data, n_frames, n_notes, midi_offset, save_as=None):
-    decoded = None
+def decode_data(encoded_data, save_decoded_at=None):
+    filename = Path().stem.replace(' ', '_').replace('/', '')
 
-    meta = data.metadata
-    data = data.data
+    decoded = stream.Stream()
 
-    for i, part in enumerate(data):
-        print('Decoding part #{}', i + 1)
-        decoded_part = decode_part(part)
-        decoded.append(decoded_part)
+    if save_decoded_at is not None:
+        if not os.path.isdir(save_decoded_at):
+            os.mkdir(save_decoded_at)
+        save_parts_at = save_decoded_at + filename + '/'
+        if not os.path.isdir(save_parts_at):
+            os.mkdir(save_parts_at)
+
+    meta = encoded_data.metadata
+    data = encoded_data.data
+
+    # get and use metadata
+
+
+    # decode parts
+    for part in data:
+        print('Decoding instrument {}', part['header']['instrument'])
+        decoded.append(decode_part(part))
 
     decoded.makeNotation(inPlace=True)
 
     # save .mid
-    if save_as is not None:
-        decoded.write('midi', fp=save_as)
+    if save_at is not None:
+        decoded.write('midi', fp=save_at + '.mid')
 
     return decoded

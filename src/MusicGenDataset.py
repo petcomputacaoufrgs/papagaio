@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 # Internal libraries
-from GetData import  *
+from encoding_example import  *
 # Data preprocessing libraries
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
