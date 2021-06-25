@@ -222,6 +222,7 @@ def encode_measure(measure, n_frames, n_notes, midi_offset, p_ks, p_bpm, p_ts, s
 # M21 Part -> Multi Hot Encoding
 def encode_part(part, n_frames, n_notes, midi_offset, save_part_at=None):
     name = part.partName.replace(' ', '_').replace('/', '')
+    save_measures_at = None
 
     if save_part_at is not None:
         save_measures_at = save_part_at + '/' + name
@@ -287,15 +288,17 @@ def encode_part(part, n_frames, n_notes, midi_offset, save_part_at=None):
 # encode the file data from a .mid file
 #
 # MIDI -> Multi Hot Encoding (Pandas DataFrame)
-def encode_data(path, n_frames, n_notes, midi_offset, save_encoded_at=None):
+def encode_data(path, n_frames, n_notes, midi_offset, save_at=None, save_folder=False):
     filename = Path(path).stem.replace(' ', '_').replace('/', '')
 
-    if save_encoded_at is not None:
-        if not os.path.isdir(save_encoded_at):
-            os.mkdir(save_encoded_at)
-        save_parts_at = save_encoded_at + filename + '/'
-        if not os.path.isdir(save_parts_at):
-            os.mkdir(save_parts_at)
+    if save_at is not None:
+        if not os.path.isdir(save_at):
+            os.mkdir(save_at)
+
+        if save_folder:
+            folder_path = save_at + filename + '/'
+            if not os.path.isdir(folder_path):
+                os.mkdir(folder_path)
 
     print('Encoding file {}'.format(filename))
     timer = time.time()
@@ -311,17 +314,27 @@ def encode_data(path, n_frames, n_notes, midi_offset, save_encoded_at=None):
     score.voicesToParts()
     score.semiFlat
 
-    if save_encoded_at is not None:
+    if save_at is not None:
 
-        parts = [
-            pd.DataFrame(
-                encode_part(part,
-                            n_frames,
-                            n_notes,
-                            midi_offset,
-                            save_part_at=save_parts_at
-                            )
-            ) for part in score.parts]
+        if save_folder:
+            parts = [
+                pd.DataFrame(
+                    encode_part(part,
+                                n_frames,
+                                n_notes,
+                                midi_offset,
+                                save_part_at=folder_path
+                                )
+                ) for part in score.parts]
+        else:
+            parts = [
+                pd.DataFrame(
+                    encode_part(part,
+                                n_frames,
+                                n_notes,
+                                midi_offset
+                                )
+                ) for part in score.parts]
 
         encoded_data = pd.Series(
             {
@@ -330,7 +343,7 @@ def encode_data(path, n_frames, n_notes, midi_offset, save_encoded_at=None):
             }
         )
 
-        encoded_data.to_csv(save_encoded_at + filename + '.csv')
+        encoded_data.to_csv(save_at + filename + '.csv')
 
         print('Took {}'.format(time.time() - timer))
         return encoded_data

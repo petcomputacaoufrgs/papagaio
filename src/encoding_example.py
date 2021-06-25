@@ -11,7 +11,7 @@ from decoder import *
 
 # from scipy import interpolate
 
-in_path = '../data/Dreadlock_Holiday.3.mid'
+in_path = '../data/Back_In_Black.mid'
 out_encoded_path = '../encoded/'
 out_decoded_path = '../decoded/'
 N_FRAMES = 36
@@ -29,15 +29,14 @@ data_in = encode_data(in_path,
                       N_FRAMES,
                       N_NOTES,
                       MIDI_OFFSET
-                      , save_encoded_at=out_encoded_path
                       )
 
 # decode
-data_out = decode_data(data_in,
-                       N_FRAMES,
-                       N_NOTES,
-                       MIDI_OFFSET,
-                       save_as=out_decoded_path)
+# data_out = decode_data(data_in,
+#                        N_FRAMES,
+#                        N_NOTES,
+#                        MIDI_OFFSET,
+#                        save_as=out_decoded_path)
 
 # for i, part in enumerate(data_in):
 #     # print(part.shape)
