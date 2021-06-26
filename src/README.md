@@ -18,11 +18,11 @@ data_in = encode_data(in_path,
 ```
 
 where:
-* in_path: is the initial .mid file path
+* in_path: is the initial ```.mid``` file path
 * N_FRAMES: is the number of frames that will be encoded
 * N_NOTES: is the number of notes that will be encoded in the framme
 * MIDI_OFFSET:  
-* save_encoded_at: .mid file path. Default: None
+* save_encoded_at: ```.mid``` file path. Default: None
 * save_file: whether the file is going to be saved or not. Default: None
 
 
