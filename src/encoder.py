@@ -192,7 +192,7 @@ def encode_measure(measure, n_frames, n_notes, midi_offset, p_ks, p_bpm, p_ts, s
     header = [m_ks,
               m_bpm,
               '{}/{}'.format(m_ts.numerator, m_ts.denominator)]
-    header = pd.DataFrame(header, index=['keySignature', 'BPM', 'timeSignature'])
+    header = pd.Series(header, index=['keySignature', 'BPM', 'timeSignature'])
 
     # pandas stackframe
     stackframe = measure2stackframe(measure,
@@ -202,13 +202,26 @@ def encode_measure(measure, n_frames, n_notes, midi_offset, p_ks, p_bpm, p_ts, s
                                     midi_offset,
                                     print_and_hold=False)
 
-    encoded_measure = pd.Series(
-        {
-            'header': header,
-            'stackframe': stackframe
-        }
+    # print('Header:\n',header)
+    # input()
+    # print('SF:\n',stackframe)
+    # input()
 
-    )
+    encoded_measure = pd.Series({
+        'header': header,
+        'stackframe': stackframe
+    }, name=number)
+
+    # encoded_measure = pd.concat([header, stackframe],
+    #                             axis=1)
+
+    # print('e_measure:\n',encoded_measure)
+    # input()
+
+    # encoded_measure = pd.DataFrame(header,
+    #                                stackframe,
+    #                                columns=['header', 'stackframe']
+    #                                )
 
     if save_at is not None:
         encoded_measure.to_csv(save_measure_at + '.csv')
@@ -221,7 +234,12 @@ def encode_measure(measure, n_frames, n_notes, midi_offset, p_ks, p_bpm, p_ts, s
 #
 # M21 Part -> Multi Hot Encoding
 def encode_part(part, n_frames, n_notes, midi_offset, save_part_at=None):
+
+    # deal with the name of the part
     name = part.partName.replace(' ', '_').replace('/', '')
+    if name is None:
+        name = 'Unknown'
+
     save_measures_at = None
 
     if save_part_at is not None:
@@ -229,7 +247,7 @@ def encode_part(part, n_frames, n_notes, midi_offset, save_part_at=None):
         if not os.path.isdir(save_measures_at):
             os.mkdir(save_measures_at)
 
-    print('Encoding part {}'.format(name))
+    print('Encoding {}'.format(name))
 
     # get part instrument
     inst = part.getElementsByClass(instrument.Instrument)[0].instrumentName
@@ -248,32 +266,38 @@ def encode_part(part, n_frames, n_notes, midi_offset, save_part_at=None):
     ks, part = transposeStreamToC(part, forceEval=True)
 
     # header
-    header = [inst,
-              ks,
+    header = [ks,
               bpm,
               '{}/{}'.format(ts.numerator, ts.denominator)]
-    header = pd.DataFrame(header, index=['instrument', 'keySignature', 'BPM', 'timeSignature'])
-
-    measures = pd.DataFrame([encode_measure(i,
-                                            n_frames,
-                                            n_notes,
-                                            midi_offset,
-                                            ks,
-                                            bpm,
-                                            '{}/{}'.format(ts.numerator, ts.denominator),
-                                            save_at=save_measures_at
-                                            ) for i in part.measures(1, len(part))])
+    header = pd.Series(header, index=['keySignature', 'BPM', 'timeSignature'])
 
     # flat the stream
+    # part = part.implode()
     # part = part.voicesToParts()
     # part = part.semiFlat
 
-    encoded_part = pd.Series(
-        {
-            'header': header,
-            'measures': measures
-        }
-    )
+    # a vector containing the measures
+    measures = [encode_measure(i,
+                               n_frames,
+                               n_notes,
+                               midi_offset,
+                               ks,
+                               bpm,
+                               '{}/{}'.format(ts.numerator, ts.denominator),
+                               save_at=save_measures_at
+                               ) for i in part.measures(1, len(part))]
+    measures_df = pd.DataFrame(measures, index=range(1, len(measures)+1))
+
+    encoded_part = pd.Series({
+        'header': header,
+        'measures': measures_df
+    }, name=inst)
+
+    # print('e_part:\n', encoded_part)
+    # input()
+
+    # encoded_part = pd.DataFrame(header, measures,
+    #                             columns=['header', 'measures'])
 
     # for showcase only
     # for measure in measures:
@@ -310,38 +334,35 @@ def encode_data(path, n_frames, n_notes, midi_offset, save_at=None, save_folder=
     # input()
 
     # polyphonic -> monophonic
-    score.explode()
-    score.voicesToParts()
-    score.semiFlat
+    # score.implode()
+    # score.voicesToParts()
+    # score.semiFlat
 
     if save_at is not None:
 
         if save_folder:
             parts = [
-                pd.DataFrame(
-                    encode_part(part,
-                                n_frames,
-                                n_notes,
-                                midi_offset,
-                                save_part_at=folder_path
-                                )
-                ) for part in score.parts]
+                encode_part(part,
+                            n_frames,
+                            n_notes,
+                            midi_offset,
+                            save_part_at=folder_path
+                            )
+                for part in score.parts]
         else:
             parts = [
-                pd.DataFrame(
-                    encode_part(part,
-                                n_frames,
-                                n_notes,
-                                midi_offset
-                                )
-                ) for part in score.parts]
+                encode_part(part,
+                            n_frames,
+                            n_notes,
+                            midi_offset
+                            )
+                for part in score.parts]
 
-        encoded_data = pd.Series(
-            {
-                'metadata': meta,
-                'data': parts
-            }
-        )
+        parts_df = pd.DataFrame(parts)
+        encoded_data = pd.Series({
+            'metadata': meta,
+            'data': parts_df
+        })
 
         encoded_data.to_csv(save_at + filename + '.csv')
 
@@ -349,19 +370,21 @@ def encode_data(path, n_frames, n_notes, midi_offset, save_at=None, save_folder=
         return encoded_data
     else:
         parts = [
-            pd.DataFrame(
-                encode_part(part,
-                            n_frames,
-                            n_notes,
-                            midi_offset
-                            )
-            ) for part in score.parts]
+            encode_part(part,
+                        n_frames,
+                        n_notes,
+                        midi_offset
+                        )
+            for part in score.parts]
+        parts_df = pd.DataFrame(parts)
 
-        encoded_data = pd.Series(
-            {
-                'metadata': meta,
-                'data': parts
-            }
-        )
+        encoded_data = pd.Series({
+            'metadata': meta,
+            'data': parts_df
+        })
+
+        # print('e_data', encoded_data)
+        # input()
+
         print('Took %f.3 seconds.' % (time.time() - timer))
         return encoded_data
