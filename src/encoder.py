@@ -180,7 +180,7 @@ def encode_measure(measure, n_frames, n_notes, midi_offset, p_ks, p_bpm, p_ts, p
     # print('Encoding measure #{}'.format(number))
 
     # check for key changes
-    m_ks, measure = transposeStreamToC(measure, force_eval=False)
+    m_ks, transposed_measure = transposeStreamToC(measure, force_eval=False)
     if m_ks is None:
         m_ks = p_ks
 
@@ -207,17 +207,20 @@ def encode_measure(measure, n_frames, n_notes, midi_offset, p_ks, p_bpm, p_ts, p
     frames_per_beat = n_frames / m_ts.numerator
 
     # header
-    header = [{p_inst, m_ks, m_bpm,
+    header = [
+               p_inst,
+               m_ks,
+               m_bpm,
                '{}/{}'.format(m_ts.numerator, m_ts.denominator)
-               }]
-    header = pd.DataFrame(data=header)
-    header1 = pd.DataFrame(np.tile(header, (n_frames + 1, 1)),
-                           columns=['instrument', 'keySignature', 'BPM', 'timeSignature'])
+               ]
+    header = pd.Series(data=header)
+    header_df = pd.DataFrame(np.tile(header, (n_frames + 1, 1)),
+                             columns=['inst', 'ks', 'bpm', 'ts'])
     # print(header1)
     # input()
 
     # pandas stackframe
-    stackframe = measure2stackframe(measure,
+    stackframe = measure2stackframe(transposed_measure,
                                     frames_per_beat,
                                     n_frames,
                                     n_notes,
@@ -232,7 +235,7 @@ def encode_measure(measure, n_frames, n_notes, midi_offset, p_ks, p_bpm, p_ts, p
     # print('SF:\n',stackframe)
     # input()
 
-    encoded_measure = pd.concat([header1, stackframe], axis=1).drop(0)
+    encoded_measure = pd.concat([header_df, stackframe], axis=1).drop(0)
     # print(encoded_measure)
     # input()
 
@@ -248,8 +251,8 @@ def encode_measure(measure, n_frames, n_notes, midi_offset, p_ks, p_bpm, p_ts, p
     #                                )
 
     if save_at is not None:
-        stackframe.to_csv(save_stackframe_at + '.csv')
-        encoded_measure.to_csv(save_measure_at + '.csv')
+        stackframe.to_pickle(save_stackframe_at + '.pkl')
+        encoded_measure.to_pickle(save_measure_at + '.pkl')
 
     return encoded_measure
 
@@ -285,7 +288,8 @@ def encode_part(part, n_frames, n_notes, midi_offset, save_part_at=None):
         exit(1)
 
     # transpose song to C major/A minor
-    ks, part = transposeStreamToC(part, force_eval=True)
+    # original_ks, part = transposeStreamToC(part, force_eval=False)
+    original_ks, transposed_part = transposeStreamToC(part, force_eval=True)
 
     # flat the stream
     # part = part.implode()
@@ -293,39 +297,29 @@ def encode_part(part, n_frames, n_notes, midi_offset, save_part_at=None):
     # part = part.semiFlat
 
     n_measures = len(part) + 1
-    first_measure = part.measures(1, 2)
-    # print(first_measure)
-    # measures = []
-    # for measure in part.measures(1, n_measures):
-    #     # print(measure)
-    #     measures.append(encode_measure(measure,
-    #                                    n_frames,
-    #                                    n_notes,
-    #                                    midi_offset,
-    #                                    ks,
-    #                                    bpm,
-    #                                    '{}/{}'.format(ts.numerator, ts.denominator),
-    #                                    save_at=save_measures_at
-    #                                    ))
 
     # a vector containing the measures
-
-    part_df = pd.DataFrame()
-
-    for measure in part.measures(1, n_measures):
-        encoded = pd.DataFrame(
+    first_measure = True
+    for measure in transposed_part.measures(1, n_measures):
+        e_measure = pd.DataFrame(
             encode_measure(measure,
                            n_frames,
                            n_notes,
                            midi_offset,
-                           ks,
+                           original_ks,
                            bpm,
                            '{}/{}'.format(ts.numerator, ts.denominator),
                            inst
                            ))
-        print(encoded)
-        part_df.append(encoded)
-    print(part_df)
+        # print(e_measure)
+        if first_measure:
+            part_df = pd.DataFrame(e_measure)
+            first_measure = False
+        else:
+            part_df = pd.concat([part_df, e_measure], axis=0, ignore_index=True)
+
+        part_df.index = part_df.index + 1
+        print(part_df)
     input()
 
     # for showcase only
@@ -333,7 +327,7 @@ def encode_part(part, n_frames, n_notes, midi_offset, save_part_at=None):
     #     encoded_part.append(measure)
 
     if save_measures_at is not None:
-        part_df.to_csv(save_part_at + '/' + inst + '.csv')
+        part_df.to_pickle(save_part_at + '/' + inst + '.pkl')
 
     return part_df
 
@@ -395,16 +389,18 @@ def encode_data(path, n_frames, n_notes, midi_offset, save_at=None, save_folder=
                             )
                 for part in score.parts]
 
-        parts_df = pd.DataFrame(parts)
-        print(parts_df)
-        input()
+        # instruments = [i['inst'] for i in parts]
 
-        encoded_data = pd.DataFrame([filename, [meta, parts_df]])
+        parts_df = pd.Series(parts, name=filename)
+        # parts_df = pd.DataFrame(parts)
+        parts_df.to_pickle(save_at + filename + '.pkl')
 
-        encoded_data.to_csv(save_at + filename + '.csv')
+        # encoded_data = pd.DataFrame(meta, parts_df)
+        # encoded_data.to_pickle(save_at + filename + '.pkl')
 
         print('Took {}'.format(time.time() - timer))
-        return encoded_data
+        # print(encoded_data.to_string())
+        return parts_df
     else:
 
         # print(score.parts)
@@ -414,14 +410,14 @@ def encode_data(path, n_frames, n_notes, midi_offset, save_at=None, save_folder=
                          n_notes,
                          midi_offset
                          ) for part in score.parts])
-        # .swapaxes(axis1=0, axis2=1)
-        print(parts_df)
-        input()
 
-        encoded_data = pd.DataFrame([meta, parts_df])
+        instruments = [i['inst'] for i in parts]
+
+        encoded_data = pd.DataFrame(parts_df)
 
         # print('e_data', encoded_data)
         # input()
 
         print('Took %f.3 seconds.' % (time.time() - timer))
+        # print(encoded_data.to_string())
         return encoded_data

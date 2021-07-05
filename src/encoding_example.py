@@ -4,7 +4,7 @@ from encoder import *
 from decoder import *
 
 in_path = '../data/Amazing.mid'
-out_encoded_file = '../encoded/Amazing.csv'
+out_encoded_file = '../encoded/Amazing.pkl'
 out_encoded_path = '../encoded/'
 out_decoded_path = '../decoded/'
 
@@ -19,12 +19,12 @@ if not os.path.isdir(out_encoded_path):
     os.mkdir(out_encoded_path)
 
 # get encoded data and save encoded file
-encoded_data = encode_data(in_path,
-                           N_FRAMES,
-                           N_NOTES,
-                           MIDI_OFFSET
-                           ,save_at=out_encoded_file
-                           )
+# encoded_data = encode_data(in_path,
+#                            N_FRAMES,
+#                            N_NOTES,
+#                            MIDI_OFFSET
+#                            ,save_at=out_encoded_path
+#                            )
 
 
 # get encoded data and save encoded file
@@ -81,14 +81,14 @@ encoded_data = encode_data(in_path,
 
 
 # open a encoded file
-# encoded_song = pd.read_csv(out_encoded_file)
-#
-# data = encoded_song.iloc[1]
-# # print(type(encoded_song))
+encoded_song = pd.read_pickle(out_encoded_file)
+print(encoded_song)
+track_1 = encoded_song.iloc[0]
+print(track_1.to_string())
 # print(data)
 # print(data[0, :])
 # input()
 
 # decode
-data_out = decode_data(encoded_data,
-                       save_decoded_at=out_decoded_path)
+# data_out = decode_data(encoded_data,
+#                        save_decoded_at=out_decoded_path)
