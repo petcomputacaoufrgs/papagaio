@@ -3,8 +3,8 @@ import pandas as pd
 from encoder import *
 from decoder import *
 
-in_path = '../data/Amazing.mid'
-out_encoded_file = '../encoded/Amazing.pkl'
+in_path = '../data/Riders_on_the_Storm.2.mid'
+out_encoded_file = '../encoded/Riders_on_the_storm_2.pkl'
 out_encoded_path = '../encoded/'
 out_decoded_path = '../decoded/'
 
@@ -26,68 +26,28 @@ if not os.path.isdir(out_encoded_path):
 #                            ,save_at=out_encoded_path
 #                            )
 
-
-# get encoded data and save encoded file
-# and a folder with all its measures and stackframes
-# encoded_data = encode_data(in_path,
-#                            N_FRAMES,
-#                            N_NOTES,
-#                            MIDI_OFFSET,
-#                            save_at=out_encoded_path,
-#                            save_folder=True
-#                            )
-
-
-# get encoded data without saving a file
-# encoded_song = encode_data(in_path,
-#                            N_FRAMES,
-#                            N_NOTES,
-#                            MIDI_OFFSET
-#                            )
-# print(type(encoded_song))
-# encoded_song.to_csv(out_encoded_path + encoded_song.name + '.csv')
-
-# song_metadadata = encoded_song.metadata
-# song_data = encoded_song.data
-
-# print('Available Instruments\n', song_data.index)
-# on = False
-# while not on:
-#     choose = input('Choose instrument:\n')
-#     choose = choose.capitalize()
-#     if choose not in song_data.index:
-#         print('Not in list, try again.')
-#     else: on = True
-
-# instrument = song_data.loc[choose]
-# print(instrument)
-
-# instrument_header = instrument.header
-# instrument_measures = instrument.measures
-# print(instrument_header)
-# print(instrument_measures)
-# input()
-
-# print first stackframes
-# print(instrument_measures.stackframe.head())
-# input()
-
-
-# instrument_measure_five = instrument_measures.loc[5]
-# instrument_stackframe_five = instrument_measure_five['stackframe']
-
-# print(instrument_measure_five, instrument_stackframe_five.to_string())
-# input()
-
+# just save the encoded data file in disk
+encode_data(in_path,
+            N_FRAMES,
+            N_NOTES,
+            MIDI_OFFSET
+            , save_at=out_encoded_path
+            )
 
 # open a encoded file
 encoded_song = pd.read_pickle(out_encoded_file)
-print(encoded_song)
-track_1 = encoded_song.iloc[0]
-print(track_1.to_string())
-# print(data)
-# print(data[0, :])
-# input()
+
+# check out the data
+# print(encoded_song)
+
+# list of instruments in this song
+instruments = list(set(encoded_song.index))
+print(instruments)
+
+# iterate over the instruments and print them
+for instrument in instruments:
+    print(encoded_song.loc[instrument])
+    input('Next instrument -> [Press Enter]')
 
 # decode
 # data_out = decode_data(encoded_data,

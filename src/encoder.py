@@ -208,11 +208,11 @@ def encode_measure(measure, n_frames, n_notes, midi_offset, p_ks, p_bpm, p_ts, p
 
     # header
     header = [
-               p_inst,
-               m_ks,
-               m_bpm,
-               '{}/{}'.format(m_ts.numerator, m_ts.denominator)
-               ]
+        p_inst,
+        m_ks,
+        m_bpm,
+        '{}/{}'.format(m_ts.numerator, m_ts.denominator)
+    ]
     header = pd.Series(data=header)
     header_df = pd.DataFrame(np.tile(header, (n_frames + 1, 1)),
                              columns=['inst', 'ks', 'bpm', 'ts'])
@@ -319,8 +319,9 @@ def encode_part(part, n_frames, n_notes, midi_offset, save_part_at=None):
             part_df = pd.concat([part_df, e_measure], axis=0, ignore_index=True)
 
         part_df.index = part_df.index + 1
-        print(part_df)
-    input()
+        # print(part_df)
+    # input()
+    # print(part_df)
 
     # for showcase only
     # for measure in measures:
@@ -389,9 +390,9 @@ def encode_data(path, n_frames, n_notes, midi_offset, save_at=None, save_folder=
                             )
                 for part in score.parts]
 
-        # instruments = [i['inst'] for i in parts]
+        parts_df = pd.concat([*parts], axis=0)
+        parts_df = parts_df.set_index('inst')
 
-        parts_df = pd.Series(parts, name=filename)
         # parts_df = pd.DataFrame(parts)
         parts_df.to_pickle(save_at + filename + '.pkl')
 
@@ -410,8 +411,6 @@ def encode_data(path, n_frames, n_notes, midi_offset, save_at=None, save_folder=
                          n_notes,
                          midi_offset
                          ) for part in score.parts])
-
-        instruments = [i['inst'] for i in parts]
 
         encoded_data = pd.DataFrame(parts_df)
 
