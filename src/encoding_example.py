@@ -3,8 +3,8 @@ import pandas as pd
 from encoder import *
 from decoder import *
 
-in_path = '../data/Riders_on_the_Storm.2.mid'
-out_encoded_file = '../encoded/Riders_on_the_storm_2.pkl'
+in_path = '../data/Amazing.mid'
+out_encoded_file = '../encoded/Amazing.pkl'
 out_encoded_path = '../encoded/'
 out_decoded_path = '../decoded/'
 
@@ -38,7 +38,8 @@ encode_data(in_path,
 encoded_song = pd.read_pickle(out_encoded_file)
 
 # check out the data
-# print(encoded_song)
+print(encoded_song.to_string())
+input()
 
 # list of instruments in this song
 instruments = list(set(encoded_song.index))
