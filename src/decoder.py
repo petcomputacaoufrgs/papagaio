@@ -14,7 +14,6 @@ def key_index2note(i, midi_offset):
 
 
 def get_transpose_interval(ks):
-
     if ks is None:
         return None
 
@@ -32,9 +31,6 @@ def decode_stackframe(stackframe):
 
 # decode a N_NOTESxN_FRAMES array and turn it into a m21 Measure
 def decode_stackframe(stackframe, n_frames, ts):
-
-
-
     last_frame = False
 
     # the stream that will receive the notes
@@ -155,11 +151,13 @@ def decode_measure(measure, n_notes, n_frames, save_at=None):
     # set ts
     decoded.append(meter.TimeSignature(measure_ts))
 
-    # decode the measure data
-    for i_frame in range(len(measure.index)):
-        frame = measure.iloc[[i_frame]]
-        print(frame)
-        input()
+    # decode the measure data, note by note
+    for note in measure.columns:
+        # filter the frames where the current note is on
+        on_frames = measure.loc[measure.loc[:, note] == True, note]
+        if not on_frames.empty:
+            print(on_frames)
+            input()
 
     # transpose it back to the original ks
     decoded.transpose(transpose_int, inPlace=True)
@@ -171,9 +169,9 @@ def decode_measure(measure, n_notes, n_frames, save_at=None):
     # return it
     return decoded
 
-# decode a PARTxN_NOTESxN_FRAMES array
-def decode_part(part, instrument_name, n_frames, n_notes, save_at=None):
 
+# decode a PARTxN_NOTESxN_FRAMES array
+def decode_part(part, instrument_name, instrument_midi_code, n_frames, n_notes, save_at=None):
     # M21 object to be returned
     decoded = stream.Part()
 
@@ -183,8 +181,8 @@ def decode_part(part, instrument_name, n_frames, n_notes, save_at=None):
     part = part.reset_index()
     part.index += 1
     part = part.drop('inst', axis=1)
-    print(part)
-    input()
+    # print(part)
+    # input()
 
     # get info about the first frame
     # and considering it as the
@@ -194,7 +192,7 @@ def decode_part(part, instrument_name, n_frames, n_notes, save_at=None):
     part_ts = part.at[1, 'ts']
 
     # set instrument
-    decoded.append(instrument.fromString(instrument_name))
+    decoded.append(instrument.instrumentFromMidiProgram(instrument_midi_code))
 
     # set key and record the tranposition int
     ks = key.Key(part_ks)
@@ -212,8 +210,8 @@ def decode_part(part, instrument_name, n_frames, n_notes, save_at=None):
     # total number of measures (bars)
     # in this part
     n_measures = len(part.index) // n_frames
-    print('n_measures: ', n_measures)
-    input()
+    # print('n_measures: ', n_measures)
+    # input()
 
     # decode measures
     #
@@ -224,8 +222,8 @@ def decode_part(part, instrument_name, n_frames, n_notes, save_at=None):
         e_frame = measure_i * n_frames
 
         measure = part.iloc[np.arange(s_frame, e_frame)]
-        print(measure)
-        input()
+        # print(measure)
+        # input()
         decoded.append(decode_measure(measure,
                                       n_notes,
                                       n_frames))
@@ -261,14 +259,21 @@ def decode_data(encoded_song, n_frames, n_notes, save_decoded_at=None):
     # get a list of unique instruments in the song
     instruments_list = list(set(encoded_song.index))
     instruments = [encoded_song.loc[i] for i in instruments_list]
+    print(instruments)
 
     # separate song parts by instrument
     for instrument in instruments:
         instrument_name = instrument.index[0]
+        # print(instrument_name)
+        instrument_midi_code = instrument.inst_code[0]
+        # print(instrument_midi_code)
         print('Decoding instrument: {}'.format(instrument_name))
         # print(instrument)
         # input()
-        decoded.append(decode_part(instrument, instrument_name, n_frames, n_notes))
+        decoded.append(decode_part(instrument,
+                                   instrument_name,
+                                   instrument_midi_code,
+                                   n_frames, n_notes))
 
     decoded.makeNotation(inPlace=True)
 

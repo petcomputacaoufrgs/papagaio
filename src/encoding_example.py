@@ -3,8 +3,8 @@ import pandas as pd
 from encoder import *
 from decoder import *
 
-in_path = '../data/Amazing.mid'
-out_encoded_file = '../encoded/Amazing.pkl'
+in_path = '../data/Dreadlock_Holiday.3.mid'
+out_encoded_file = '../encoded/Dreadlock_holiday_3.pkl'
 out_encoded_path = '../encoded/'
 out_decoded_path = '../decoded/'
 
@@ -19,11 +19,12 @@ if not os.path.isdir(out_encoded_path):
     os.mkdir(out_encoded_path)
 
 # get encoded data and save encoded file
-# encoded_song = encode_data(in_path,
-#                            N_FRAMES,
-#                            N_NOTES,
-#                            MIDI_OFFSET
-#                            )
+encoded_song = encode_data(in_path,
+                           N_FRAMES,
+                           N_NOTES,
+                           MIDI_OFFSET
+                           , save_at=out_encoded_path
+                           )
 
 # just save the encoded data file in disk
 # encode_data(in_path,

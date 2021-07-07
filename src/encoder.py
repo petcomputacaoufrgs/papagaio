@@ -171,7 +171,7 @@ def measure2stackframe(measure, frames_per_beat, n_frames, n_notes, midi_offset,
 # encode a single measure
 #
 # M21 Measure -> Multi Hot Encoding
-def encode_measure(measure, n_frames, n_notes, midi_offset, p_ks, p_bpm, p_ts, p_inst, save_at=None):
+def encode_measure(measure, n_frames, n_notes, midi_offset, p_ks, p_bpm, p_ts, p_inst, p_inst_midi_code, save_at=None):
     number = measure.measureNumber
     if save_at is not None:
         save_measure_at = save_at + '/Measure_' + str(number)
@@ -209,13 +209,14 @@ def encode_measure(measure, n_frames, n_notes, midi_offset, p_ks, p_bpm, p_ts, p
     # header
     header = [
         p_inst,
+        p_inst_midi_code,
         m_ks,
         m_bpm,
         '{}/{}'.format(m_ts.numerator, m_ts.denominator)
     ]
     header = pd.Series(data=header)
     header_df = pd.DataFrame(np.tile(header, (n_frames + 1, 1)),
-                             columns=['inst', 'ks', 'bpm', 'ts'])
+                             columns=['inst', 'inst_code', 'ks', 'bpm', 'ts'])
     # print(header1)
     # input()
 
@@ -262,10 +263,12 @@ def encode_measure(measure, n_frames, n_notes, midi_offset, p_ks, p_bpm, p_ts, p
 # M21 Part -> Multi Hot Encoding
 def encode_part(part, n_frames, n_notes, midi_offset, save_part_at=None):
     # get part instrument
-    inst = part.getElementsByClass(instrument.Instrument)[0].instrumentName
-
-    if inst is None:
-        inst = 'Unknown'
+    inst_midi_code = part.getElementsByClass(instrument.Instrument)[0].midiProgram
+    if inst_midi_code is None:
+        logging.warning('Could not retrieve Midi Program from instrument {}, skipping.'
+                        .format(part.getElementsByClass(instrument.Instrument)[0].instrumentName))
+        return None
+    inst = instrument.instrumentFromMidiProgram(inst_midi_code).instrumentName
     inst = inst.capitalize().replace('/', '').replace('.', '_')
 
     save_measures_at = None
@@ -309,7 +312,8 @@ def encode_part(part, n_frames, n_notes, midi_offset, save_part_at=None):
                            original_ks,
                            bpm,
                            '{}/{}'.format(ts.numerator, ts.denominator),
-                           inst
+                           inst,
+                           inst_midi_code
                            ))
         # print(e_measure)
         if first_measure:
