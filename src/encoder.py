@@ -266,7 +266,7 @@ def encode_part(part, n_frames, n_notes, midi_offset, save_part_at=None):
 
     if inst is None:
         inst = 'Unknown'
-    inst = inst.capitalize()
+    inst = inst.capitalize().replace('/', '').replace('.', '_')
 
     save_measures_at = None
 
@@ -405,18 +405,22 @@ def encode_data(path, n_frames, n_notes, midi_offset, save_at=None, save_folder=
     else:
 
         # print(score.parts)
-        parts_df = pd.DataFrame(
-            [encode_part(part,
-                         n_frames,
-                         n_notes,
-                         midi_offset
-                         ) for part in score.parts])
+        parts = [
+            encode_part(part,
+                        n_frames,
+                        n_notes,
+                        midi_offset
+                        )
+            for part in score.parts]
+
+        parts_df = pd.concat([*parts], axis=0)
+        parts_df = parts_df.set_index('inst')
 
         encoded_data = pd.DataFrame(parts_df)
 
         # print('e_data', encoded_data)
         # input()
 
-        print('Took %f.3 seconds.' % (time.time() - timer))
+        print('Took {}'.format(time.time() - timer))
         # print(encoded_data.to_string())
         return encoded_data

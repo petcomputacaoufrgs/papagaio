@@ -131,55 +131,76 @@ def decode_stackframe(stackframe, n_frames, ts):
     return output
 
 
-def decode_measure(measure, save_at=None):
+def decode_measure(measure, n_notes, n_frames, save_at=None):
     decoded = stream.Measure()
 
-    # get measure header and stackframe
-    header = measure['header']
-    stackframe = measure['stackframe']
+    # get info about the first frame
+    # and considering it as the
+    # 'Main' info of the song
+    measure_ks = measure.ks.mode()[0]
+    measure_bpm = measure.bpm.mode()[0]
+    measure_ts = measure.ts.mode()[0]
 
-    # get header data
-    part_ks = header['keySignature']
-    part_bpm = header['BPM']
-    part_ts = header['timeSignature']
+    measure = measure.drop(['ks', 'bpm', 'ts'], axis=1)
 
     # set key and record the tranposition int
-    ks = key.Key(part_ks)
+    ks = key.Key(measure_ks)
     transpose_int = get_transpose_interval(ks)
     decoded.append(ks)
 
     # set bpm
-    decoded.append(tempo.MetronomeMark(number=part_bpm,
+    decoded.append(tempo.MetronomeMark(number=measure_bpm,
                                        referent='quarter'))
 
     # set ts
-    decoded.append(meter.TimeSignature(part_ts))
+    decoded.append(meter.TimeSignature(measure_ts))
 
-    # decode and append stackframe
-    decoded.append(decode_stackframe(stackframe))
+    # decode the measure data
+    for i_frame in range(len(measure.index)):
+        frame = measure.iloc[[i_frame]]
+        print(frame)
+        input()
 
+    # transpose it back to the original ks
+    decoded.transpose(transpose_int, inPlace=True)
+
+    # make offsets and durations more strict
+    # NOTE: it can remove the 'humanity' of the dynamics
+    decoded.quantize(inPlace=True)
+
+    # return it
+    return decoded
 
 # decode a PARTxN_NOTESxN_FRAMES array
-def decode_part(part, save_at=None):
+def decode_part(part, instrument_name, n_frames, n_notes, save_at=None):
+
+    # M21 object to be returned
     decoded = stream.Part()
 
-    # get part header and measures
-    header = part['header']
-    measures = part['measures']
+    # replace index:
+    #
+    # Instrument Name -> Frame Number in Part
+    part = part.reset_index()
+    part.index += 1
+    part = part.drop('inst', axis=1)
+    print(part)
+    input()
 
-    # get header data
-    part_inst = header['instrument']
-    part_ks = header['keySignature']
-    part_bpm = header['BPM']
-    part_ts = header['timeSignature']
+    # get info about the first frame
+    # and considering it as the
+    # 'Main' info of the song
+    part_ks = part.at[1, 'ks']
+    part_bpm = part.at[1, 'bpm']
+    part_ts = part.at[1, 'ts']
 
     # set instrument
-    decoded.append(instrument.fromString(part_inst))
+    decoded.append(instrument.fromString(instrument_name))
 
     # set key and record the tranposition int
     ks = key.Key(part_ks)
-    transpose_int = get_transpose_interval(ks)
     decoded.append(ks)
+
+    transpose_int = get_transpose_interval(ks)
 
     # set bpm
     decoded.append(tempo.MetronomeMark(number=part_bpm,
@@ -188,22 +209,28 @@ def decode_part(part, save_at=None):
     # set ts
     decoded.append(meter.TimeSignature(part_ts))
 
+    # total number of measures (bars)
+    # in this part
+    n_measures = len(part.index) // n_frames
+    print('n_measures: ', n_measures)
+    input()
+
     # decode measures
-
+    #
     # iterate over measures (bars)
-    for i, m in enumerate(measures):
-        # measure settings
-        decoded.append(key.Key(m[0]))
-        decoded.append(tempo.MetronomeMark(number=m[1], referent='quarter'))
-        # decoded.append(tempo.TempoIndication(m[1]))
-        decoded.append(meter.TimeSignature(m[2]))
+    for measure_i in range(1, n_measures + 1):
+        # calculate first and last frame indexes
+        s_frame = (measure_i - 1) * n_frames
+        e_frame = measure_i * n_frames
 
-        # now here comes the frames
-        measure = pd.DataFrame(m[3:][0])
-        measure = measure.T
-        print("Measure {}\n".format(i+1), measure)
-        # input()
-        decoded.append(decode_measure(measure, meter.TimeSignature('4/4')))
+        measure = part.iloc[np.arange(s_frame, e_frame)]
+        print(measure)
+        input()
+        decoded.append(decode_measure(measure,
+                                      n_notes,
+                                      n_frames))
+
+        # send measure to decoding
 
     decoded.transpose(transpose_int, inPlace=True)
     decoded.makeNotation(inPlace=True)
@@ -214,8 +241,10 @@ def decode_part(part, save_at=None):
     return decoded
 
 
-# decode a list of streams
-def decode_data(encoded_data, save_decoded_at=None):
+#
+#
+#  Multi Hot Encoding (Pandas DataFrame) -> MIDI
+def decode_data(encoded_song, n_frames, n_notes, save_decoded_at=None):
     filename = Path().stem.replace(' ', '_').replace('/', '')
 
     decoded = stream.Stream()
@@ -227,16 +256,19 @@ def decode_data(encoded_data, save_decoded_at=None):
         if not os.path.isdir(save_parts_at):
             os.mkdir(save_parts_at)
 
-    meta = encoded_data.metadata
-    data = encoded_data.data
+    # meta = encoded_data.metadata
 
-    # get and use metadata
+    # get a list of unique instruments in the song
+    instruments_list = list(set(encoded_song.index))
+    instruments = [encoded_song.loc[i] for i in instruments_list]
 
-
-    # decode parts
-    for part in data:
-        print('Decoding instrument {}', part['header']['instrument'])
-        decoded.append(decode_part(part))
+    # separate song parts by instrument
+    for instrument in instruments:
+        instrument_name = instrument.index[0]
+        print('Decoding instrument: {}'.format(instrument_name))
+        # print(instrument)
+        # input()
+        decoded.append(decode_part(instrument, instrument_name, n_frames, n_notes))
 
     decoded.makeNotation(inPlace=True)
 
