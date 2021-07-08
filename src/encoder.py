@@ -171,11 +171,11 @@ def measure2stackframe(measure, frames_per_beat, n_frames, n_notes, midi_offset,
 # encode a single measure
 #
 # M21 Measure -> Multi Hot Encoding
-def encode_measure(measure, n_frames, n_notes, midi_offset, p_ks, p_bpm, p_ts, p_inst, p_inst_midi_code, save_at=None):
+def encode_measure(measure, n_frames, n_notes, midi_offset, p_ks, p_bpm, p_ts, p_inst, p_inst_midi_code, save_as=None):
     number = measure.measureNumber
-    if save_at is not None:
-        save_measure_at = save_at + '/Measure_' + str(number)
-        save_stackframe_at = save_at + '/stackframe_' + str(number)
+    if save_as is not None:
+        save_measure_at = save_as + '/Measure_' + str(number)
+        save_stackframe_at = save_as + '/stackframe_' + str(number)
 
     # print('Encoding measure #{}'.format(number))
 
@@ -251,7 +251,7 @@ def encode_measure(measure, n_frames, n_notes, midi_offset, p_ks, p_bpm, p_ts, p
     #                                columns=['header', 'stackframe']
     #                                )
 
-    if save_at is not None:
+    if save_as is not None:
         stackframe.to_pickle(save_stackframe_at + '.pkl')
         encoded_measure.to_pickle(save_measure_at + '.pkl')
 
@@ -340,23 +340,23 @@ def encode_part(part, n_frames, n_notes, midi_offset, save_part_at=None):
 # encode the file data from a .mid file
 #
 # MIDI -> Multi Hot Encoding (Pandas DataFrame)
-def encode_data(path, n_frames, n_notes, midi_offset, save_at=None, save_folder=False):
+def encode_data(path, n_frames, n_notes, midi_offset, save_as=None, save_folder=False):
     filename = Path(path).stem.replace(' ', '_').replace('/', '').replace('.', '_')
     filename = filename.capitalize()
 
-    if save_at is not None:
-        if not os.path.isdir(save_at):
-            os.mkdir(save_at)
+    if save_as is not None:
+        # if not os.path.isdir(save_as):
+        #     os.mkdir(save_as)
 
         if save_folder:
-            folder_path = save_at + filename + '/'
+            folder_path = save_as + filename + '/'
             if not os.path.isdir(folder_path):
                 os.mkdir(folder_path)
 
     print('Encoding file {}'.format(filename))
     timer = time.time()
 
-    score = open_file(path)
+    score = open_file(path + '.mid')
     if not score:
         # bad file
         return None
@@ -374,7 +374,7 @@ def encode_data(path, n_frames, n_notes, midi_offset, save_at=None, save_folder=
     # print('Instruments in file: {}'.format(len(score.parts)))
     # input()
 
-    if save_at is not None:
+    if save_as is not None:
 
         if save_folder:
             parts = [
@@ -398,10 +398,10 @@ def encode_data(path, n_frames, n_notes, midi_offset, save_at=None, save_folder=
         parts_df = parts_df.set_index('inst')
 
         # parts_df = pd.DataFrame(parts)
-        parts_df.to_pickle(save_at + filename + '.pkl')
+        parts_df.to_pickle(save_as + '.pkl')
 
         # encoded_data = pd.DataFrame(meta, parts_df)
-        # encoded_data.to_pickle(save_at + filename + '.pkl')
+        # encoded_data.to_pickle(save_as + filename + '.pkl')
 
         print('Took {}'.format(time.time() - timer))
         # print(encoded_data.to_string())
