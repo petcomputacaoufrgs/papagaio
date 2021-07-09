@@ -90,9 +90,9 @@ def open_file(midi_path, no_drums=True):
 #
 # M21 Stream (Measure) -> Multi Hot Encoding
 def measure_data(measure):
+    items = measure.flat.notes
     data = []
-    for item in measure:
-        # print(item)
+    for item in items:
         if isinstance(item, note.Note) or isinstance(item, note.Rest):
             data.append(item)
             # print('data', data)
@@ -108,13 +108,20 @@ def measure_data(measure):
 #
 #  M21 Measure -> Multi Hot Encodinghttps://tenor.com/view/taffarel-futebol-no-score-gif-12585286
 def measure2stackframe(measure, frames_per_beat, n_frames, n_notes, midi_offset, print_and_hold=False):
-    data = measure_data(measure.flat)
+
+    data = measure_data(measure)
+
+    # print(data)
+    # input()
 
     keyboard_range = n_notes + midi_offset
 
     frames = [[False for i in range(n_notes)] for j in range(n_frames)]
 
     for item in data:
+
+        # print(item)
+        # input()
 
         # if item is a Rest, we can break
         # since no key must be turned on
@@ -255,21 +262,30 @@ def encode_measure(measure, n_frames, n_notes, midi_offset, p_ks, p_bpm, p_ts, p
         stackframe.to_pickle(save_stackframe_at + '.pkl')
         encoded_measure.to_pickle(save_measure_at + '.pkl')
 
+    # print(encoded_measure.to_string())
+    # input()
+
     return encoded_measure
 
 
 # encode a single part
 #
 # M21 Part -> Multi Hot Encoding
-def encode_part(part, n_frames, n_notes, midi_offset, save_part_at=None):
+def encode_part(part, n_frames, n_notes, midi_offset, instrument_list, save_part_at=None):
     # get part instrument
     inst_midi_code = part.getElementsByClass(instrument.Instrument)[0].midiProgram
     if inst_midi_code is None:
         logging.warning('Could not retrieve Midi Program from instrument {}, skipping.'
                         .format(part.getElementsByClass(instrument.Instrument)[0].instrumentName))
         return None
+
     inst = instrument.instrumentFromMidiProgram(inst_midi_code).instrumentName
     inst = inst.capitalize().replace('/', '').replace('.', '_')
+
+    while inst in instrument_list:
+        inst += '_'
+
+    instrument_list.append(inst)
 
     save_measures_at = None
 
@@ -362,13 +378,14 @@ def encode_data(path, n_frames, n_notes, midi_offset, save_as=None, save_folder=
         return None
 
     meta = score.metadata
+    instrument_list = []
 
     # print('Instruments in file: {}'.format(len(score.parts)))
     # input()
 
     # polyphonic -> monophonic
-    # score.explode()
-    score.voicesToParts()
+    score.explode()
+    # score.voicesToParts()
     score.semiFlat
 
     # print('Instruments in file: {}'.format(len(score.parts)))
@@ -382,6 +399,7 @@ def encode_data(path, n_frames, n_notes, midi_offset, save_as=None, save_folder=
                             n_frames,
                             n_notes,
                             midi_offset,
+                            instrument_list,
                             save_part_at=folder_path
                             )
                 for part in score.parts]
@@ -390,7 +408,8 @@ def encode_data(path, n_frames, n_notes, midi_offset, save_as=None, save_folder=
                 encode_part(part,
                             n_frames,
                             n_notes,
-                            midi_offset
+                            midi_offset,
+                            instrument_list
                             )
                 for part in score.parts]
 
@@ -413,7 +432,8 @@ def encode_data(path, n_frames, n_notes, midi_offset, save_as=None, save_folder=
             encode_part(part,
                         n_frames,
                         n_notes,
-                        midi_offset
+                        midi_offset,
+                        instrument_list
                         )
             for part in score.parts]
 

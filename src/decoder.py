@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+import time
 import numpy as np
 from tqdm import tqdm
 import pandas as pd
@@ -122,13 +123,16 @@ def decode_stackframe(stackframe, n_frames, ts):
 
     # make offsets and durations more strict
     # NOTE: it can remove the 'humanity' of the dynamics
-    output.quantize(inPlace=True)
+    # output.quantize(inPlace=True)
 
     return output
 
 
-def decode_measure(measure, n_notes, n_frames, save_as=None):
-    decoded = stream.Measure()
+def decode_measure(measure, n_measure, n_frames, curr_info, save_as=None):
+    # print(measure.to_string())
+    # input()
+
+    decoded = stream.Measure(number=n_measure)
 
     # get info about the first frame
     # and considering it as the
@@ -139,23 +143,36 @@ def decode_measure(measure, n_notes, n_frames, save_as=None):
 
     measure = measure.drop(['ks', 'bpm', 'ts'], axis=1)
 
-    # set key and record the tranposition int
     ks = key.Key(measure_ks)
     transpose_int = get_transpose_interval(ks)
-    decoded.append(ks)
+    # check for ks change
+    if measure_ks != curr_info['ks']:
+        # set key and record the tranposition int
+        curr_info[0] = measure_ks
+        decoded.append(ks)
 
-    # set bpm
-    decoded.append(tempo.MetronomeMark(number=measure_bpm,
-                                       referent='quarter'))
+    # check for bpm change
+    if measure_bpm != curr_info['bpm']:
+        # set bpm
+        curr_info[1] = measure_bpm
+        decoded.append(tempo.MetronomeMark(number=measure_bpm,
+                                           referent='quarter'))
 
-    # set ts
     ts = meter.TimeSignature(measure_ts)
-    decoded.append(ts)
+    # check for ts change
+    if measure_ts != curr_info['ts']:
+        # set ts
+        curr_info[2] = measure_ts
+        decoded.append(ts)
 
     # calculate amount of frames per beat
     frames_per_beat = n_frames // ts.numerator
 
+    # measure offset on part (i.e. measure number)
     measure_offset = (measure.index[0] // n_frames) * ts.numerator
+
+    # get number of last frame on measure
+    # last_frame = (n_measure - 1) * n_frames + n_frames
 
     # decode the measure data, note by note
     for measure_note in measure.columns:
@@ -163,17 +180,18 @@ def decode_measure(measure, n_notes, n_frames, save_as=None):
         on_frames = measure.loc[measure.loc[:, measure_note] == True, measure_note]
 
         if not on_frames.empty:
+
+            # print(on_frames)
+
             # calculate duration in frames (amount of frames on)
             frames_dur = len(on_frames.index)
             beat_dur = frames_dur / frames_per_beat
-            # print(beat_dur)
 
             # get the start frame of the note
             frames_offset = (int(on_frames.index[0]) % n_frames) - 1
             beat_offset = frames_offset / frames_per_beat
-            # print(beat_offset)
 
-            # instanciate note and add infos
+            # instantiate note and add infos
             note_obj = note.Note(nameWithOctave=measure_note)
             note_obj.duration.quarterLength = beat_dur
 
@@ -183,9 +201,12 @@ def decode_measure(measure, n_notes, n_frames, save_as=None):
     # transpose it back to the original ks
     decoded.transpose(transpose_int, inPlace=True)
 
+    # insert rests in between the notes
+    decoded.makeRests(fillGaps=True, inPlace=False, hideRests=True)
+
     # make offsets and durations more strict
     # NOTE: it can remove the 'humanity' of the dynamics
-    decoded.quantize(inPlace=True)
+    # decoded.quantize(inPlace=True)
 
     # decoded.show('text')
     # input()
@@ -196,6 +217,10 @@ def decode_measure(measure, n_notes, n_frames, save_as=None):
 
 # decode a PARTxN_NOTESxN_FRAMES array
 def decode_part(part, instrument_name, instrument_midi_code, n_frames, n_notes, save_as=None):
+
+    # print(part.to_string())
+    # input()
+
     # M21 object to be returned
     decoded = stream.Part()
 
@@ -235,10 +260,20 @@ def decode_part(part, instrument_name, instrument_midi_code, n_frames, n_notes, 
     # print('n_measures: ', n_measures)
     # input()
 
+    # here we will create a pd Series
+    # containing the current decoder info
+    # about the part
+    curr_ks = None
+    curr_bpm = None
+    curr_ts = None
+    # these are the notes that are kept playing since last measure
+    # (notes that start in on measure and ends in another)
+    curr_on_notes = []
+    curr_info = pd.Series([curr_ks, curr_bpm, curr_ts],
+                          index=['ks', 'bpm', 'ts'])
     # decode measures
     #
     # iterate over measures (bars)
-
     for measure_i in range(1, n_measures + 1):
         # calculate first and last frame indexes
         s_frame = (measure_i - 1) * n_frames
@@ -250,9 +285,12 @@ def decode_part(part, instrument_name, instrument_midi_code, n_frames, n_notes, 
 
         # send measure to decoding
         measure = decode_measure(measure,
-                                 n_notes,
-                                 n_frames)
+                                 measure_i,
+                                 n_frames,
+                                 curr_info)
         decoded.insert(*measure)
+
+    decoded.makeTies(inPlace=True)
 
     decoded.makeNotation(inPlace=True)
 
@@ -274,6 +312,9 @@ def decode_data(encoded_song, n_frames, n_notes, save_as=None):
         # if not os.path.isdir(save_parts_at):
         #     os.mkdir(save_parts_at)
 
+    # print(encoded_song)
+    # input()
+
     decoded = stream.Score()
 
     # meta = encoded_data.metadata
@@ -285,13 +326,12 @@ def decode_data(encoded_song, n_frames, n_notes, save_as=None):
 
     # separate song parts by instrument
     for instrument in instruments:
-
         instrument_name = instrument.index[0]
         instrument_midi_code = instrument.inst_code[0]
 
         print('Decoding instrument: {}'.format(instrument_name))
-        # print(instrument)
-        # input()
+        timer = time.time()
+
         part = decode_part(instrument,
                            instrument_name,
                            instrument_midi_code,
@@ -302,11 +342,11 @@ def decode_data(encoded_song, n_frames, n_notes, save_as=None):
 
     decoded.makeNotation(inPlace=True)
 
-    decoded.show('text')
+    # decoded.show('text')
 
     # save .mid
     if save_as is not None:
-        # print(save_as + filename + '.mid')
         decoded.write('midi', fp=save_as + '.mid')
 
+    print('Took {}'.format(time.time() - timer))
     return decoded

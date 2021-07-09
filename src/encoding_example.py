@@ -6,7 +6,7 @@ from decoder import *
 data_path = '../data/'
 out_encoded_path = '../encoded/'
 out_decoded_path = '../decoded/'
-file = 'Dont_Stop_Me_Now.1'
+file = 'All_I_Have_to_Do_Is_Dream'
 in_file = data_path + file
 out_encoded = out_encoded_path + file
 out_decoded = out_decoded_path + file
@@ -41,20 +41,6 @@ encoded_song = encode_data(in_file,
 
 # open a encoded file
 # encoded_song = pd.read_pickle(out_encoded + '.pkl')
-
-# check out the data
-# print(encoded_song)
-# input()
-
-# list of instruments in this song
-# instruments = list(set(encoded_song.index))
-# print(instruments)
-# input()
-
-# iterate over the instruments and print them
-# for instrument in instruments:
-#     print(encoded_song.loc[instrument])
-#     input('Next instrument -> [Press Enter]')
 
 # decode
 data_out = decode_data(encoded_song,
