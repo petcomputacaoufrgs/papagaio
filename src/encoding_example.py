@@ -1,12 +1,11 @@
 import pandas as pd
-
-from encoder import *
 from decoder import *
+from encoder import *
 
 data_path = '../data/'
 out_encoded_path = '../encoded/'
 out_decoded_path = '../decoded/'
-file = 'All_I_Have_to_Do_Is_Dream'
+file = 'Going_to_California'
 in_file = data_path + file
 out_encoded = out_encoded_path + file
 out_decoded = out_decoded_path + file
@@ -40,7 +39,7 @@ encoded_song = encode_data(in_file,
 #             )
 
 # open a encoded file
-# encoded_song = pd.read_pickle(out_encoded + '.pkl')
+encoded_song = pd.read_pickle(out_encoded + '.pkl')
 
 # decode
 data_out = decode_data(encoded_song,
