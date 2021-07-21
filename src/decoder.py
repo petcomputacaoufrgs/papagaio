@@ -1,18 +1,10 @@
 from pathlib import Path
-import logging
 import os
 import time
 import numpy as np
 from tqdm import tqdm
 import pandas as pd
 from music21 import *
-
-
-# discover if a list is a continuous sequence
-def is_continuous(list):
-    # if list is empty or len is 1,  return True
-    if len(list) < 2: return True
-    return list[-1] - list[0] == len(list) - 1
 
 
 # Key index in our keyboard -> M21 Note
@@ -189,65 +181,19 @@ def decode_measure(measure, n_measure, n_frames, curr_info, save_as=None):
 
         if not on_frames.empty:
 
-            # get the list of on frames
-            frames = [int(f) for f in on_frames.index]
-
-            # print(frames)
-            # print(is_continuous(frames))
-            # input()
-
-            # if 'frames' is a continuous sequence it can become a single note.
-            # if not, it'll become more than one
-            while not is_continuous(frames):
-                # this will keep track of the frames we
-                # have already counted
-                temp = []
-                while is_continuous(temp):
-                    # temp is continuous, we'll try to add
-                    # the next frame
-                    temp.append(frames[0])
-
-                    if is_continuous(temp):
-                        # it temp is still continuous, it's safe to
-                        # remove the frame added in the last line
-                        # from the original 'frames' list
-                        del frames[0]
-                    else:
-                        # if temp is now no more
-                        # a continuous sequece, we must
-                        # remove from 'temp' the frame that
-                        # caused this property loss
-                        del temp[-1]
-                        break
-
-                # print(temp)
-                # input()
-                # calculate duration in frames (amount of frames on)
-                frames_dur = len(temp)
-                n_obj = note.Note(nameWithOctave=measure_note)
-                beat_dur = frames_dur / frames_per_beat
-                n_obj.duration.quarterLength = beat_dur
-
-                # get the start frame of the note
-                frames_offset = (temp[0] % n_frames) - 1
-                beat_offset = frames_offset / frames_per_beat
-
-                # insert into stream
-                decoded.insert(beat_offset, n_obj)
-
-            #
-            #  here list of frames is continuous sequence
-            #
+            # print(on_frames)
 
             # calculate duration in frames (amount of frames on)
-            frames_dur = len(frames)
-            note_obj = note.Note(nameWithOctave=measure_note)
+            frames_dur = len(on_frames.index)
             beat_dur = frames_dur / frames_per_beat
-            note_obj.duration.quarterLength = beat_dur
 
             # get the start frame of the note
-            frames_offset = (frames[0] % n_frames) - 1
+            frames_offset = (int(on_frames.index[0]) % n_frames) - 1
             beat_offset = frames_offset / frames_per_beat
+
+            # instantiate note and add infos
+            note_obj = note.Note(nameWithOctave=measure_note)
+            note_obj.duration.quarterLength = beat_dur
 
             # insert into stream
             decoded.insert(beat_offset, note_obj)
@@ -271,6 +217,7 @@ def decode_measure(measure, n_measure, n_frames, curr_info, save_as=None):
 
 # decode a PARTxN_NOTESxN_FRAMES array
 def decode_part(part, instrument_name, instrument_midi_code, n_frames, n_notes, save_as=None):
+
     # print(part.to_string())
     # input()
 
@@ -399,17 +346,7 @@ def decode_data(encoded_song, n_frames, n_notes, save_as=None):
 
     # save .mid
     if save_as is not None:
-        # try:
-        #     mf = midi.translate.streamToMidiFile(decoded)
-        #     mf.open(save_as + '.mid', 'wb')
-        #     mf.write()
-        # except:
-        #     logging.warning('Could not save MIDI file.')
-        #     pass
-
-        mf = midi.translate.streamToMidiFile(decoded, )
-        mf.open(save_as + '.mid', 'wb')
-        mf.write()
+        decoded.write('midi', fp=save_as + '.mid')
 
     print('Took {}'.format(time.time() - timer))
     return decoded

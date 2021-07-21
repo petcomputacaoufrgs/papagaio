@@ -1,4 +1,4 @@
-import warnings
+import logging
 import os
 import time
 import pandas as pd
@@ -36,8 +36,8 @@ def transposeStreamToC(stream, force_eval=False):
     # return the own input.
     # this is, we reject the input
     if stream_key is None:
-        warnings.warn('Transposing measures containing empty KeySignatures can cause errors. Returning key as None '
-                      'type.')
+        # logging.warning('Transposing measures containing empty KeySignatures can cause errors. Returning key as None '
+        #                 'type.')
         return None, stream
 
     # at this point we should have a key
@@ -64,14 +64,19 @@ def open_file(midi_path, no_drums=True):
     mf = midi.MidiFile()
     mf.open(midi_path)
 
+    if mf.format not in [0, 1]:
+        # m21 cant read
+        logging.warning('Music21 cant open format {} MIDI files. Skipping.'.format(mf.format))
+        return None
+
     mf.read()
     mf.close()
 
-    if mf.format != 1:
-        # m21 cant read
-        raise ValueError(f'The project currently does not support type {mf.format} MIDI files.')
-
     n_tracks = len(mf.tracks)
+
+    if n_tracks == 1 or n_tracks is None:
+        logging.warning('MIDI file has only 1 track, Skipping.'.format(mf.format))
+        return None
 
     # if no_drums is on, we'll remove the drums
     if no_drums:
@@ -103,6 +108,7 @@ def measure_data(measure):
 #
 #  M21 Measure -> Multi Hot Encodinghttps://tenor.com/view/taffarel-futebol-no-score-gif-12585286
 def measure2stackframe(measure, frames_per_beat, n_frames, n_notes, midi_offset, print_and_hold=False):
+
     data = measure_data(measure)
 
     # print(data)
@@ -199,8 +205,8 @@ def encode_measure(measure, n_frames, n_notes, midi_offset, p_ks, p_bpm, p_ts, p
         if m_ts != p_ts:
             # ts changed
             if m_ts.ratioString != '4/4':
-                warnings.warn('Found measure not in 4/4.')
-                # return None
+                logging.warning('Found measure not in 4/4, skipping.')
+                return None
     else:
         m_ts = p_ts
 
@@ -269,21 +275,15 @@ def encode_part(part, n_frames, n_notes, midi_offset, instrument_list, save_part
     # get part instrument
     inst_midi_code = part.getElementsByClass(instrument.Instrument)[0].midiProgram
     if inst_midi_code is None:
-        warnings.warn('Could not retrieve Midi Program from instrument {}.'
-                      .format(part.getElementsByClass(instrument.Instrument)[0].instrumentName)
-                      + 'Setting it to default value 0.')
-        return 0
+        logging.warning('Could not retrieve Midi Program from instrument {}, skipping.'
+                        .format(part.getElementsByClass(instrument.Instrument)[0].instrumentName))
+        return None
 
     inst = instrument.instrumentFromMidiProgram(inst_midi_code).instrumentName
     inst = inst.capitalize().replace('/', '').replace('.', '_')
 
-    # if instrument name already in the list,
-    # change its name by counting repetitions
-    if inst in instrument_list:
-        counter = 2
-        while inst + f' {counter}' in instrument_list:
-            counter += 1
-        inst += f' {counter}'
+    while inst in instrument_list:
+        inst += '_'
 
     instrument_list.append(inst)
 
@@ -303,7 +303,8 @@ def encode_part(part, n_frames, n_notes, midi_offset, instrument_list, save_part
     # filter parts that are not in 4/4
     ts = part.getTimeSignatures()[0]
     if ts.ratioString != '4/4':
-        warnings.warn('Found part not in 4/4 on instrument {}'.format(inst))
+        logging.error('Part not in 4/4, breaking.')
+        exit(1)
 
     # transpose song to C major/A minor
     # original_ks, part = transposeStreamToC(part, force_eval=False)
@@ -382,10 +383,10 @@ def encode_data(path, n_frames, n_notes, midi_offset, save_as=None, save_folder=
     # print('Instruments in file: {}'.format(len(score.parts)))
     # input()
 
-    # prepare Stream for data extraction
-    score = score.explode()
-    score = score.voicesToParts()
-    score = score.semiFlat
+    # polyphonic -> monophonic
+    score.explode()
+    # score.voicesToParts()
+    score.semiFlat
 
     # print('Instruments in file: {}'.format(len(score.parts)))
     # input()
