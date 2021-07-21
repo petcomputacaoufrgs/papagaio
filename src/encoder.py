@@ -282,8 +282,13 @@ def encode_part(part, n_frames, n_notes, midi_offset, instrument_list, save_part
     inst = instrument.instrumentFromMidiProgram(inst_midi_code).instrumentName
     inst = inst.capitalize().replace('/', '').replace('.', '_')
 
-    while inst in instrument_list:
-        inst += '_'
+    # if instrument name already in the list,
+    # change its name by counting repetitions
+    if inst in instrument_list:
+        counter = 2
+        while inst + f' {counter}' in instrument_list:
+            counter += 1
+        inst += f' {counter}'
 
     instrument_list.append(inst)
 
@@ -379,14 +384,6 @@ def encode_data(path, n_frames, n_notes, midi_offset, save_as=None, save_folder=
 
     meta = score.metadata
     instrument_list = []
-
-    # print('Instruments in file: {}'.format(len(score.parts)))
-    # input()
-
-    # polyphonic -> monophonic
-    score.explode()
-    # score.voicesToParts()
-    score.semiFlat
 
     # print('Instruments in file: {}'.format(len(score.parts)))
     # input()

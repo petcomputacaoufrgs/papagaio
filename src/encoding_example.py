@@ -11,7 +11,7 @@ in_file = data_path + file
 out_encoded = out_encoded_path + file
 out_decoded = out_decoded_path + file
 
-N_FRAMES = 36
+N_FRAMES = 96
 N_NOTES = 88
 MIDI_OFFSET = 20
 
@@ -45,5 +45,4 @@ encoded_song = encode_data(in_file,
 # decode
 data_out = decode_data(encoded_song,
                        N_FRAMES,
-                       N_NOTES,
                        save_as=out_decoded)
