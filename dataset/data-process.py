@@ -2,16 +2,25 @@ import guitarpro
 import music21
 import os
 
-file = 'gp_files/Sting/Sting - Shape Of My Heart (ver 3).gp3'
+file = 'gp_files/Bob Marley/Bob Marley - Waiting In Vain (ver 3 by Mauriciobasalo).gp5'
 path, filename = os.path.split(file)
 
-if filename[:-3] == 'gpx':
+if filename.endswith('.gp'):
+    new_fn = filename + '5'
+    os.rename(filename, new_fn)
+    print(f'{filename} -> {new_fn}')
+    filename = new_fn
+
+if filename.endswith('gpx'):
     #turn gpX files int GP5
-    filename = filename[:-1] + '5'
+    new_fn = filename[:-1] + '5'
+    os.rename(filename, new_fn)
+    print(f'{filename} -> {new_fn}')
+    filename = new_fn
 
 path = path.replace('gp_files', 'mid_files')
 os.makedirs(path, exist_ok=True)
-outfile = os.path.join(path, filename)
+outfile = os.path.join(path, filename[:-4] + '.mid')
 print(outfile)
 os.system(f"musescore '{file}' -o '{outfile}'")
 

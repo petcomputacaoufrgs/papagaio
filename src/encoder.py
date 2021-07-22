@@ -275,9 +275,9 @@ def encode_part(part, n_frames, n_notes, midi_offset, instrument_list, save_part
     # get part instrument
     inst_midi_code = part.getElementsByClass(instrument.Instrument)[0].midiProgram
     if inst_midi_code is None:
-        logging.warning('Could not retrieve Midi Program from instrument {}, skipping.'
-                        .format(part.getElementsByClass(instrument.Instrument)[0].instrumentName))
-        return None
+        inst_midi_code = 0
+        logging.warning('Could not retrieve Midi Program from instrument, setting it to default value 0 ({})'
+                        .format(instrument.instrumentFromMidiProgram(inst_midi_code).instrumentName))
 
     inst = instrument.instrumentFromMidiProgram(inst_midi_code).instrumentName
     inst = inst.capitalize().replace('/', '').replace('.', '_')
