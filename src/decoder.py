@@ -135,7 +135,7 @@ def decode_stackframe(stackframe, n_frames, ts):
 
     return output
 
-
+# TODO: ligadura, conectar duas measures e somar as durações
 def decode_measure(measure, n_measure, n_frames, curr_info, save_as=None):
     # print(measure.to_string())
     # input()
@@ -344,7 +344,7 @@ def decode_part(part, instrument_name, instrument_midi_code, n_frames, save_as=N
         decoded.insert(*measure)
 
     decoded.makeTies(inPlace=True)
-
+    decoded = midi.translate.prepareStreamForMidi(decoded, inPlace=True)
     decoded.makeNotation(inPlace=True)
 
     if save_as is not None:

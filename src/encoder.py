@@ -180,6 +180,10 @@ def measure2stackframe(measure, frames_per_beat, n_frames, n_notes, midi_offset,
 # M21 Measure -> Multi Hot Encoding
 def encode_measure(measure, n_frames, n_notes, midi_offset, p_ks, p_bpm, p_ts, p_inst, p_inst_midi_code, save_as=None):
     number = measure.measureNumber
+
+    # TODO: ligadura, conectar duas measures e somar as durações
+
+
     if save_as is not None:
         save_measure_at = save_as + '/Measure_' + str(number)
         save_stackframe_at = save_as + '/stackframe_' + str(number)
