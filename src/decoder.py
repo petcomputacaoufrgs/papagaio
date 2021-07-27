@@ -344,7 +344,7 @@ def decode_part(part, instrument_name, instrument_midi_code, n_frames, save_as=N
         decoded.insert(*measure)
 
     decoded.makeTies(inPlace=True)
-    decoded = midi.translate.prepareStreamForMidi(decoded, inPlace=True)
+    decoded = midi.translate.prepareStreamForMidi(decoded)
     decoded.makeNotation(inPlace=True)
 
     if save_as is not None:
@@ -407,7 +407,7 @@ def decode_data(encoded_song, n_frames, save_as=None):
         #     logging.warning('Could not save MIDI file.')
         #     pass
 
-        mf = midi.translate.streamToMidiFile(decoded, )
+        mf = midi.translate.streamToMidiFile(decoded)
         mf.open(save_as + '.mid', 'wb')
         mf.write()
 
