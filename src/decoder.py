@@ -344,7 +344,7 @@ def decode_part(part, instrument_name, instrument_midi_code, n_frames, save_as=N
         decoded.insert(*measure)
 
     decoded.makeTies(inPlace=True)
-    decoded = midi.translate.prepareStreamForMidi(decoded)
+    # decoded = midi.translate.prepareStreamForMidi(decoded)
     decoded.makeNotation(inPlace=True)
 
     if save_as is not None:
