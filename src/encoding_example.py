@@ -6,12 +6,12 @@ from decoder import *
 data_path = '../data/'
 out_encoded_path = '../encoded/'
 out_decoded_path = '../decoded/'
-file = 'All_I_Have_to_Do_Is_Dream'
+file = 'All I Have To Do Is Dream'
 in_file = data_path + file
 out_encoded = out_encoded_path + file
 out_decoded = out_decoded_path + file
 
-N_FRAMES = 96
+N_FRAMES = 36
 N_NOTES = 88
 MIDI_OFFSET = 20
 
@@ -41,6 +41,7 @@ encoded_song = encode_data(in_file,
 
 # open a encoded file
 # encoded_song = pd.read_pickle(out_encoded + '.pkl')
+# encoded_song.show()
 
 # decode
 data_out = decode_data(encoded_song,

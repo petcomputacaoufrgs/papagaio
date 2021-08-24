@@ -33,108 +33,6 @@ def get_transpose_interval(ks):
             return interval.Interval(pitch.Pitch('a'), ks.tonic)
 
 
-# MultiHotEncoding -> M21 Notes
-def decode_stackframe(stackframe):
-    notes = []
-
-
-# decode a N_NOTESxN_FRAMES array and turn it into a m21 Measure
-def decode_stackframe(stackframe, n_frames, ts):
-    last_frame = False
-
-    # the stream that will receive the notes
-    output = stream.Measure()
-
-    # vectors that will hold the current notes states and durations
-    # they are initialized with the values of the first frame
-    state_register = stackframe[:][0].copy().to_numpy()
-    start_register = stackframe[:][0].copy().to_numpy() - 1
-    duration_register = stackframe[:][0].copy().to_numpy()
-
-    # iterate over frames
-    for f in range(n_frames):
-        # print('Frame ', f)
-        # with np.printoptions(threshold=np.inf):
-        #     print('\nStates:\t', state_register.reshape(1, 88))
-        #     print('\nStarts:\t', start_register.reshape(1, 88))
-        #     print('\nDurs:\t', duration_register.reshape(1, 88))
-        # input()
-
-        frames_per_beat = n_frames / ts.numerator
-
-        frame = stackframe[f]
-
-        if f == n_frames - 1:
-            last_frame = True
-
-        # print("Frame {}\n".format(f), frame)
-        # input()
-
-        # iterate over notes
-        # state is ON/OFF 1/0
-        for note_index, state in enumerate(frame):
-
-            # if note state changed
-            if bool(state) != bool(state_register[note_index]):
-
-                # 1 -> *0*
-                if bool(state) is False:
-
-                    nt = key_index2note(note_index)
-                    nt.duration.quarterLength = duration_register[note_index] / frames_per_beat
-
-                    note_offset = start_register[note_index] / frames_per_beat
-                    output.insert(note_offset, nt)
-
-                    # print('Note {} turned off at frame {}\n'.format(int2note(note_index).nameWithOctave, f + 1) +
-                    #       'offset of {} frames ({})\n'.format(start_register[note_index], note_offset) +
-                    #       'and duration on {} frames ({})'.format(duration_register[note_index],
-                    #                                               nt.duration.quarterLength))
-                    # input()
-
-                    # restarting the registers
-                    duration_register[note_index] = 0
-                    state_register[note_index] = 0
-                    start_register[note_index] = -1
-
-
-                # 0 -> *1*
-                else:
-                    # starting registers
-                    duration_register[note_index] = 1
-                    state_register[note_index] = 1
-                    start_register[note_index] = f
-
-                    # print('Note {} turned on at frame {}'.format(int2note(note_index).nameWithOctave, f + 1))
-                    # input()
-
-            # if note is on and didnt change, increase duration
-            elif bool(state) is True:
-                duration_register[note_index] += 1
-
-                # print('Note {} increased duration at frame {} ({} frames)'.
-                #       format(int2note(note_index).nameWithOctave, f + 1, duration_register[note_index]))
-                # input()
-
-            # note is ON and measure ended
-            elif bool(state_register[note_index]) and last_frame:
-
-                nt = key_index2note(note_index)
-                note.duration.quarterLength = duration_register[note_index] / frames_per_beat
-
-                note_offset = start_register[note_index] / frames_per_beat
-                output.insert(note_offset, nt)
-                # print('Note {} turned off at frame {}\n'.format(int2note(note_index).nameWithOctave, f + 1) +
-                #       'offset of {} frames ({})\n'.format(start_register[note_index], note_offset) +
-                #       'and duration on {} frames ({})'.format(duration_register[note_index], nt.duration.quarterLength))
-                # input()
-
-    # make offsets and durations more strict
-    # NOTE: it can remove the 'humanity' of the dynamics
-    # output.quantize(inPlace=True)
-
-    return output
-
 # TODO: ligadura, conectar duas measures e somar as durações
 def decode_measure(measure, n_measure, n_frames, curr_info, save_as=None):
     # print(measure.to_string())
@@ -260,13 +158,13 @@ def decode_measure(measure, n_measure, n_frames, curr_info, save_as=None):
 
     # make offsets and durations more strict
     # NOTE: it can remove the 'humanity' of the dynamics
-    # decoded.quantize(inPlace=True)
+    decoded.quantize(inPlace=True)
 
     # decoded.show('text')
     # input()
 
     # return it
-    return measure_offset, decoded
+    return decoded
 
 
 # decode a PARTxN_NOTESxN_FRAMES array
@@ -341,10 +239,9 @@ def decode_part(part, instrument_name, instrument_midi_code, n_frames, save_as=N
                                  measure_i,
                                  n_frames,
                                  curr_info)
-        decoded.insert(*measure)
+        decoded.insert(measure)
 
     decoded.makeTies(inPlace=True)
-    # decoded = midi.translate.prepareStreamForMidi(decoded)
     decoded.makeNotation(inPlace=True)
 
     if save_as is not None:

@@ -305,24 +305,32 @@ def encode_part(part, n_frames, n_notes, midi_offset, instrument_list, save_part
 
     print('Encoding {}'.format(inst))
 
-    # get part tempo
-    metronome = part.getElementsByClass(tempo.TempoIndication)[0]
-    bpm = metronome.getQuarterBPM()
-
-    # filter parts that are not in 4/4
-    ts = part.getTimeSignatures()[0]
-    if ts.ratioString != '4/4':
-        logging.error('Part not in 4/4, breaking.')
-        exit(1)
-
-    # transpose song to C major/A minor
-    # original_ks, part = transposeStreamToC(part, force_eval=False)
-    original_ks, transposed_part = transposeStreamToC(part, force_eval=True)
-
     # flat the stream
     # part = part.implode()
     # part. = part.voicesToParts()
     # part = part.semiFlat
+
+    # get part tempo
+    metronome = part.getElementsByClass(tempo.TempoIndication)
+    if metronome:
+        bpm = 120
+        logging.warning('Could not retrieve Metronome object from Part, setting BPM to default value ({})'
+                        .format(bpm))
+    else:
+        bpm = metronome[0].getQuarterBPM()
+
+    # filter parts that are not in 4/4
+    time_signature = part.getElementsByClass(meter.TimeSignature)
+    if len(time_signature) == 0:
+        ts = meter.TimeSignature('4/4')
+        logging.warning('Could not retrieve Time Signature object from Part, setting TS to default value ({})'
+                        .format(ts))
+    else:
+        ts = time_signature[0]
+
+    # transpose song to C major/A minor
+    # original_ks, part = transposeStreamToC(part, force_eval=False)
+    original_ks, transposed_part = transposeStreamToC(part, force_eval=True)
 
     n_measures = len(part) + 1
 
@@ -385,6 +393,8 @@ def encode_data(path, n_frames, n_notes, midi_offset, save_as=None, save_folder=
     if not score:
         # bad file
         return None
+
+    score.show('text')
 
     meta = score.metadata
     instrument_list = []
