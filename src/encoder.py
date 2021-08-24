@@ -312,7 +312,7 @@ def encode_part(part, n_frames, n_notes, midi_offset, instrument_list, save_part
 
     # get part tempo
     metronome = part.getElementsByClass(tempo.TempoIndication)
-    if metronome:
+    if len(metronome) == 0:
         bpm = 120
         logging.warning('Could not retrieve Metronome object from Part, setting BPM to default value ({})'
                         .format(bpm))
