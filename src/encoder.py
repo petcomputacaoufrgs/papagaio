@@ -228,8 +228,6 @@ def encode_measure(measure, n_frames, n_notes, midi_offset, p_ks, p_bpm, p_ts, p
     header = pd.Series(data=header)
     header_df = pd.DataFrame(np.tile(header, (n_frames + 1, 1)),
                              columns=['inst', 'inst_code', 'ks', 'bpm', 'ts'])
-    # print(header1)
-    # input()
 
     # pandas stackframe
     stackframe = measure2stackframe(transposed_measure,
@@ -374,17 +372,14 @@ def encode_part(part, n_frames, n_notes, midi_offset, instrument_list, save_part
 #
 # MIDI -> Multi Hot Encoding (Pandas DataFrame)
 def encode_data(path, n_frames, n_notes, midi_offset, save_as=None, save_folder=False):
-    filename = Path(path).stem.replace(' ', '_').replace('/', '').replace('.', '_')
-    filename = filename.capitalize()
+    filename = Path(path).stem.replace('/', '').replace('.', ' ')
 
     if save_as is not None:
-        # if not os.path.isdir(save_as):
-        #     os.mkdir(save_as)
+        os.makedirs(save_as, exist_ok=True)
 
         if save_folder:
             folder_path = save_as + filename + '/'
-            if not os.path.isdir(folder_path):
-                os.mkdir(folder_path)
+            os.makedirs(folder_path, exist_ok=True)
 
     print('Encoding file {}'.format(filename))
     timer = time.time()
@@ -394,7 +389,7 @@ def encode_data(path, n_frames, n_notes, midi_offset, save_as=None, save_folder=
         # bad file
         return None
 
-    score.show('text')
+    # score.show('text')
 
     meta = score.metadata
     instrument_list = []
