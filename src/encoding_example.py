@@ -1,19 +1,21 @@
+import os
 import pandas as pd
 
-from encoder import *
-from decoder import *
+from MidiExpress import read, write
 
-data_path = '../data/'
+data_path = '../datasets/midi/test/lpd_midi/'
 out_encoded_path = '../encoded/'
 out_decoded_path = '../decoded/'
-file = 'All I Have To Do Is Dream'
+file = '(When You Say You Love Somebody) In The Heart.mid'
 in_file = data_path + file
 out_encoded = out_encoded_path + file
 out_decoded = out_decoded_path + file
 
-N_FRAMES = 36
-N_NOTES = 88
-MIDI_OFFSET = 20
+SETTINGS = {
+  'RESOLUTION': 36,
+  'KEYBOARD_SIZE': 88,
+  'KEYBOARD_OFFSET': 20
+}
 
 # be sure that the dirs exist
 if not os.path.isdir(data_path):
@@ -22,28 +24,21 @@ if not os.path.isdir(out_decoded_path):
     os.mkdir(out_decoded_path)
 if not os.path.isdir(out_encoded_path):
     os.mkdir(out_encoded_path)
+# os.makedirs(out_decoded, )
 
 # get encoded data and save encoded file
-encoded_song = encode_data(in_file,
-                           N_FRAMES,
-                           N_NOTES,
-                           MIDI_OFFSET
-                           , save_as=out_encoded
-                           )
-
-# just save the encoded data file in disk
-# encode_data(in_path,
-#             N_FRAMES,
-#             N_NOTES,
-#             MIDI_OFFSET
-#             , save_as=out_encoded_path
-#             )
+interpreted_song = read.file(in_file,
+                             SETTINGS,
+                             save_as=out_encoded
+                            )
 
 # open a encoded file
 # encoded_song = pd.read_pickle(out_encoded + '.pkl')
-# encoded_song.show()
+# print(interpreted_song)
 
 # decode
-data_out = decode_data(encoded_song,
-                       N_FRAMES,
-                       save_as=out_decoded)
+reverted_song = write.file(interpreted_song,
+                           SETTINGS,
+                           save_as=out_decoded)
+
+# data_out.show()
