@@ -14,8 +14,8 @@ import logging
 
 DOWNLOAD_TIMEOUT = 10
 
-req_proxy = RequestProxy()
-proxies = req_proxy.get_proxy_list()
+# req_proxy = RequestProxy()
+# proxies = req_proxy.get_proxy_list()
 
 # brasa = [proxy for proxy in proxies if proxy.country == 'Brazil']
 # PROXY = brasa[6].get_address()
@@ -24,6 +24,14 @@ proxies = req_proxy.get_proxy_list()
 #     "proxyType": "MANUAL",
 # }
 
+
+proxies = {
+    1: 'http://131.108.118.27:8080',
+    2: 'http://36.89.194.113:40252',
+    3: 'http://170.210.4.222:37490',
+    4: 'http://200.116.198.177:35184',
+    5: 'http://136.228.141.154:80'
+}
 
 
 logging.getLogger("selenium.webdriver.remote.remote_connection").setLevel(logging.CRITICAL)
@@ -42,14 +50,14 @@ def download_file(url, destination):
     profile.set_preference("browser.download.manager.showWhenStarting", True)
     profile.set_preference("browser.download.dir", destination)
     profile.set_preference("browser.helperApps.neverAsk.saveToDisk", "application/octet-stream")
-    profile.set_preference("browser.download.manager.quitBehavior", 0)
+    profile.set_preference("browser.download.manager.quitBehavior", 1)
 
     driver = webdriver.Firefox(options=options, firefox_profile=profile)
 
     # try:
     driver.get(url)
     button = WebDriverWait(driver, DOWNLOAD_TIMEOUT).until(
-        EC.presence_of_element_located(
+        EC.visibility_of_element_located(
             (By.XPATH,
              '//button/span[text()="DOWNLOAD Guitar Pro TAB" '
              'or text()="DOWNLOAD Power TAB"]'
@@ -72,18 +80,22 @@ def download_file(url, destination):
     # finally:
     #     driver.quit()
 
+def setProxy(proxy):
+    webdriver.firefox.firefox_profile.add
+
         
 data = pd.DataFrame(pd.read_csv('results.csv'))
 data.drop(str(data.columns[0]), axis=1, inplace=True)
 
 n_songs = len(data)
 
-data = data[450:500]
+data = data[0:500]
 
 # print(data)
 # input()
 
-PROXY = proxies[0].get_address()
+# PROXY = proxies[0].get_address()
+PROXY = proxies[1]
 webdriver.DesiredCapabilities.FIREFOX['proxy'] = {
     "httpProxy": PROXY,
     "proxyType": "MANUAL",
@@ -91,15 +103,18 @@ webdriver.DesiredCapabilities.FIREFOX['proxy'] = {
 
 for i, song in data.iterrows():
 
+    if song['Check']:
+        continue
+
     title = song['Title'].replace('/', '').replace('.', '_')
     artist = song['Artist'].replace('/', '').replace('.', '_')
     url = song['URL']
     folder = f'{os.getcwd()}/gp_files/{artist}/'
     os.makedirs(folder, exist_ok=True)
 
-    # change proxy every 5 downloads
-    if i % 5 == 0:
-        PROXY = proxies[len(proxies) % i].get_address()
+    # change proxy every 10 downloads
+    if i % 10 == 0:
+        PROXY = proxies[i % len(proxies) + 1]
         webdriver.DesiredCapabilities.FIREFOX['proxy'] = {
             "httpProxy": PROXY,
             "proxyType": "MANUAL",
@@ -108,5 +123,12 @@ for i, song in data.iterrows():
 
     start = time.time()
     print(f'[{i + 1}/{n_songs}] {url} -> ', end="", flush=True)
-    download_file(url, folder)
-    print(f' [DONE in {format((time.time() - start), ".2f")}s]')
+    try:
+        download_file(url, folder)
+        song['Check'] = True
+        print(f' [DONE in {format((time.time() - start), ".2f")}s]')
+    except Exception as e:
+        print('[FAILED]', e)
+
+# update table
+data.to_csv('results.csv')

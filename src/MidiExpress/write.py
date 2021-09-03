@@ -118,7 +118,7 @@ def measure(m_instrument, m_environment, m_performance, SETTINGS, measure_index)
                 # calculate duration in frames (amount of frames on)
                 n_obj = music21.note.Note(nameWithOctave=measure_note)
                 beat_dur = len(temp) / frames_per_beat
-                n_obj.duration.quarterLength = beat_dur
+                n_obj.duration.quarterLength = abs(beat_dur)
 
                 # get the start frame of the note
                 frames_offset = (temp[0] % SETTINGS.RESOLUTION) - 1
@@ -134,10 +134,10 @@ def measure(m_instrument, m_environment, m_performance, SETTINGS, measure_index)
             # calculate duration in quarters
             note_obj = music21.note.Note(nameWithOctave=measure_note)
             beat_dur = len(frames) / frames_per_beat
-            note_obj.duration.quarterLength = beat_dur
+            note_obj.duration.quarterLength = abs(beat_dur)
 
             # get the start frame of the note
-            frames_offset = (frames[0] % SETTINGS.RESOLUTION) - 1
+            frames_offset = abs((frames[0] % SETTINGS.RESOLUTION) - 1)
             beat_offset = frames_offset / frames_per_beat
 
             # insert into measure

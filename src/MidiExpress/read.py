@@ -153,7 +153,8 @@ def measure2stackframe(measure, SETTINGS, frames_per_beat):
 
         # turn them on captain!
         for frame in range(frame_s, frame_e):
-            frames[frame][i_key] = True
+            try: frames[frame][i_key] = True
+            except: pass
 
     # create Pandas dataframe
     note_names = [key_index2note(i, SETTINGS.KEYBOARD_OFFSET).nameWithOctave for i in range(0, SETTINGS.KEYBOARD_SIZE)]
@@ -190,7 +191,7 @@ def measure(m, SETTINGS, INSTRUMENT_BLOCK, ENVIRONMENT_BLOCK):
         if m_ts != ENVIRONMENT_BLOCK.TS:
             # ts changed
             if m_ts.ratioString != '4/4':
-                logging.warning('Found measure not in 4/4, skipping.')
+                # logging.warning('Found measure not in 4/4, skipping.')
                 # return None
                 pass
     else:
@@ -237,7 +238,7 @@ def instrument(part, SETTINGS, instrument_list=None):
     if inst_midi_code is None:
         inst_midi_code = 0
         logging.warning('Could not retrieve Midi Program from instrument, setting it to default value 0 ({})'
-                        .format(instrument.instrumentFromMidiProgram(inst_midi_code).instrumentName))
+                        .format(music21.instrument.instrumentFromMidiProgram(inst_midi_code).instrumentName))
 
     inst_name = music21.instrument.instrumentFromMidiProgram(inst_midi_code).instrumentName
     inst_name = inst_name.capitalize().replace('/', '').replace('.', '_')
@@ -338,9 +339,6 @@ def instrument(part, SETTINGS, instrument_list=None):
 # }
 
 def file(path, SETTINGS, save_as=None):
-    filename = os.path.basename(path)
-
-    SETTINGS = pd.Series(SETTINGS)
 
     # print(f'SETTINGS: \n\n {SETTINGS} \n\n')
 
@@ -366,6 +364,6 @@ def file(path, SETTINGS, save_as=None):
     parts_df = parts_df.set_index('INSTRUMENT')
 
     if save_as is not None:
-        parts_df.to_pickle(filename + '.pkl')
+        parts_df.to_pickle(save_as + '.pkl')
 
     return parts_df
