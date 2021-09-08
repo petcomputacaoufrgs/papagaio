@@ -1,4 +1,5 @@
 import os
+import sys
 import pretty_midi
 import time
 import streamlit as st
@@ -8,8 +9,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from MidiExpress import read, write
-from MidiExpress.write import key_index2note
+# import src.MidiExpress as MidiExpress
+
 
 SETTINGS = pd.Series(
     {
@@ -111,13 +112,19 @@ def generateMeasures(model, context, resolution, amount=1, temperature=0.5, batc
     return np.array(output_measures, dtype=bool)
 
 
+header = st.beta_container()
+modelUpload = st.beta_container()
+modelUpload = st.beta_container()
+
+
+
 @st.cache(suppress_st_warning=True)
 def readContextFile(file):
     contextFile = pretty_midi.PrettyMIDI(file)
 
     contextFile.write('temp.mid')
 
-    context = read.file('temp.mid', SETTINGS)
+    context = MidiExpress.read.file('temp.mid', SETTINGS)
 
     return context
 
@@ -153,7 +160,7 @@ def mergeData(infos, stackframe, instrument, midi_offset):
     keyboard_size = stackframe.shape[2]
 
     # Generate note names and use as column
-    sf_columns = [key_index2note(i, midi_offset).nameWithOctave for i in range(keyboard_size)]
+    sf_columns = [MidiExpress.key_index2note(i, midi_offset).nameWithOctave for i in range(keyboard_size)]
 
     # Initialize blank df with notes column
     measures = pd.DataFrame([], columns=sf_columns)
@@ -210,7 +217,7 @@ def runGeneration(model, instrument, contextData, amountToGenerate, firstContext
         with showGen1:
             st.table(generatedRepresentation.head(50))
 
-        generatedFile = write.file(generatedRepresentation, SETTINGS, save_as='output.mid')
+        generatedFile = MidiExpress.write.file(generatedRepresentation, SETTINGS, save_as='output.mid')
 
         showGen2 = st.expander('Show generated file as piano roll', expanded=False)
         with showGen2:
@@ -225,14 +232,7 @@ def runGeneration(model, instrument, contextData, amountToGenerate, firstContext
 
 def main():
 
-    st.set_page_config(
-        page_title="Papagaio",
-        page_icon="musical_note",
-        initial_sidebar_state="collapsed",
-        layout='wide'
-    )
-
-    st.title('Papagaio: Digital music generation using Bidirectional LSTM')
+    # st.title('Papagaio: Digital music generation using Bidirectional LSTM')
 
     modelFile = st.file_uploader('Upload a model', type='pt')
     if modelFile is not None:
@@ -275,4 +275,10 @@ def main():
 
 
 if __name__ == '__main__':
+    st.set_page_config(
+        page_title="Papagaio",
+        page_icon="musical_note",
+        initial_sidebar_state="collapsed",
+        layout='wide'
+    )
     main()
